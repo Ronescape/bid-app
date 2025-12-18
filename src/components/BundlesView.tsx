@@ -3,7 +3,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Sparkles, Zap, Crown, Coins, TrendingUp, DollarSign, Calendar } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface Bundle {
   id: string;
