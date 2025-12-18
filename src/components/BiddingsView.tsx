@@ -43,7 +43,7 @@ export function BiddingsView({ username, userPoints, onPointsUsed }: BiddingsVie
         id: '1',
         title: 'iPhone 15 Pro Max',
         description: '256GB, Titanium Blue, Brand New Sealed',
-        image: 'https://images.unsplash.com/photo-1696446702797-6df46ed6a2f8?w=400',
+        image: 'https://images.unsplash.com/photo-1695639509828-d4260075e370?w=400',
         currentBid: 850,
         startingBid: 500,
         bidders: 24,
@@ -526,7 +526,7 @@ export function BiddingsView({ username, userPoints, onPointsUsed }: BiddingsVie
               ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-purple-500/50'
               : 'bg-slate-800/50 text-slate-400'
           }`}
-          onClick={(e) => {
+          onClick={(e : any) => {
             e.stopPropagation();
             setSelectedItem(item);
           }}
@@ -541,19 +541,19 @@ export function BiddingsView({ username, userPoints, onPointsUsed }: BiddingsVie
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="p-4 text-center bg-gradient-to-br from-red-600 to-pink-600 border-0 shadow-xl shadow-red-500/50">
-          <div className="text-white mb-1">{liveItems.length}</div>
+      <div className="grid grid-cols-3 gap-1">
+        <Card className="p-4 text-center bg-slate-800/30 backdrop-blur-sm border-slate-700/50">
+          <div className="text-lg text-white mb-1">{liveItems.length}</div>
           <div className="text-sm text-white/80">Live</div>
         </Card>
-        <Card className="p-4 text-center bg-gradient-to-br from-blue-600 to-purple-600 border-0 shadow-xl shadow-blue-500/50">
-          <div className="text-white mb-1">{upcomingItems.length}</div>
+        <Card className="p-4 text-center bg-slate-800/30 backdrop-blur-sm border-slate-700/50">
+          <div className="text-lg text-white mb-1">{upcomingItems.length}</div>
           <div className="text-sm text-white/80">Upcoming</div>
         </Card>
         <Card className="p-4 text-center bg-slate-800/30 backdrop-blur-sm border-slate-700/50">
-          <div className="text-white mb-1">{endedItems.length}</div>
+          <div className="text-lg text-white mb-1">{endedItems.length}</div>
           <div className="text-sm text-slate-400">Ended</div>
         </Card>
       </div>
