@@ -67,54 +67,53 @@ export function AccountView({ username, onLogout, userPoints }: AccountViewProps
 
   return (
     <div className="space-y-4">
-      {/* Profile Header */}
-      <Card className="relative overflow-hidden bg-slate-800/50 backdrop-blur-sm border-slate-700/50 p-6">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-900/50 via-slate-800/50 to-blue-900/50"></div>
-        <div className="relative z-10">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 bg-gradient-to-br from-purple-600 via-pink-500 to-blue-600 rounded-full flex items-center justify-center shadow-xl">
-                <span className="text-white text-2xl">
-                  {username.charAt(0).toUpperCase()}
-                </span>
+    {/* Profile Header */}
+    <Card className="relative overflow-hidden bg-slate-800/50 backdrop-blur-sm border-slate-700/50 p-4 sm:p-6">
+      <div className="absolute inset-0 bg-gradient-to-r from-purple-900/50 via-slate-800/50 to-blue-900/50"></div>
+      <div className="relative z-10 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-purple-600 via-pink-500 to-blue-600 rounded-full flex items-center justify-center shadow-xl flex-shrink-0">
+            <span className="text-white text-xl sm:text-2xl">
+              {username.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <h2 className="text-white truncate text-lg sm:text-xl">@{username}</h2>
+            <p className="text-slate-400 text-sm sm:text-base">Member since {userData.joinDate}</p>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 shadow-xl text-xs sm:text-sm">
+                <Award className="w-3 h-3 mr-1" />
+                {userData.level} Bidder
+              </Badge>
+              <div className="flex items-center gap-1 text-xs sm:text-sm bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                <span className="text-yellow-400">★</span>
+                <span className="text-white">{userData.rating}</span>
               </div>
-              <div>
-                <h2 className="text-white">@{username}</h2>
-                <p className="text-slate-400">Member since {userData.joinDate}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 shadow-xl">
-                    <Award className="w-3 h-3 mr-1" />
-                    {userData.level} Bidder
-                  </Badge>
-                  <div className="flex items-center gap-1 text-sm bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
-                    <span className="text-yellow-400">★</span>
-                    <span className="text-white">{userData.rating}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <div className="text-right">
-                <div className="text-sm text-slate-400">Points Balance</div>
-                <div className="text-2xl bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
-                  {userPoints}
-                </div>
-              </div>
-              <Button 
-                variant="outline"
-                onClick={onLogout}
-                className="border-red-500/30 text-red-400 hover:bg-red-500/20 hover:text-white hover:border-red-500/50"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
             </div>
           </div>
         </div>
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-40 h-40 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-full blur-3xl"></div>
-      </Card>
+        <div className="flex flex-col items-start sm:items-end gap-2">
+          <div className="text-left sm:text-right">
+            <div className="text-xs sm:text-sm text-slate-400">Points Balance</div>
+            <div className="text-xl sm:text-2xl bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
+              {userPoints}
+            </div>
+          </div>
+          <Button
+            onClick={onLogout}
+            className="mt-2 sm:mt-2 w-full bg-gradient-to-r from-blue-600 to-purple-600 sm:w-auto hover:opacity-90 transition-all shadow-xl border-0"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </Button>
+        </div>
+      </div>
+
+      {/* Decorative elements */}
+      <div className="absolute top-0 right-0 w-32 h-32 sm:w-40 sm:h-40 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-0 left-0 w-32 h-32 sm:w-40 sm:h-40 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-full blur-3xl"></div>
+    </Card>
+
 
       {/* Stats Grid */}
       <div className="grid grid-cols-4 gap-2">

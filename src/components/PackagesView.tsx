@@ -172,7 +172,7 @@ export function PackagesView({ onPointsAdded }: PackagesViewProps) {
   return (
     <div className="space-y-4">
       {/* Header Stats */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-1">
         <Card className="p-4 text-center bg-slate-800/30 backdrop-blur-sm border-slate-700/50">
           <div className="flex items-center justify-center gap-2 mb-2">
             <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center">
