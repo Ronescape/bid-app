@@ -71,33 +71,95 @@ export default function App() {
       setIsRefreshing(true);
     }
     
-    let payloadBody = { init_data: window.Telegram.WebApp.initData };
-    const url = `${process.env.REACT_APP_API_URL}/mini-app/auth`;
+    setApiError(null);
 
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
-
-    await apiPost(url, JSON.stringify(payloadBody), headers,
-      (responseData : any) => {
-        setUserData({
-          username: responseData.name || responseData.username  || 'User',
-          points: responseData.points || 500,
-          telegramId: responseData.tg_id.toString(),
-          avatar: responseData.avatar || responseData.photo_url,
-          totalBids: responseData.totalBids || 0,
-          wonAuctions: responseData.wonAuctions || 0,
-          joinDate: responseData.joinDate || new Date().toISOString().split('T')[0]
-        });
-        alert('User Data: ' + JSON.stringify(responseData));
-        localStorage.setItem('bidwin_user', JSON.stringify(responseData));
-      },
-      (error) => {
-        console.log(error);
-        setApiError(error.message || 'Failed to sign in');
+    try {
+      let payloadBody: any = {};
+      let url = `${API_URL}/mini-app/auth`;
+      
+      if (window.Telegram?.WebApp) {
+        const tg = window.Telegram.WebApp;
+        
+        const initData = tg.initData || tg.initDataUnsafe || '';
+        
+        if (initData) {
+          payloadBody.init_data = initData;
+        } else {
+          console.warn('No Telegram initData available');
+          const cachedUser = localStorage.getItem('bidwin_user');
+          if (cachedUser) {
+            setUserData(JSON.parse(cachedUser));
+            return;
+          }
+        }
+      } else {
+        console.log('Running in browser mode, using demo data');
+        const demoUser = {
+          username: 'DemoUser',
+          points: 500,
+          totalBids: 0,
+          wonAuctions: 0,
+          joinDate: new Date().toISOString().split('T')[0]
+        };
+        setUserData(demoUser);
+        localStorage.setItem('bidwin_user', JSON.stringify(demoUser));
+        return;
       }
-    );
+
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+
+      await apiPost(
+        url,
+        JSON.stringify(payloadBody),
+        headers,
+        (responseData: any) => {
+          console.log('User data received:', responseData);
+          
+          const userDataUpdate: UserData = {
+            username: responseData.name || responseData.username || userData.username,
+            points: responseData.points || 500,
+            telegramId: responseData.tg_id?.toString() || responseData.telegramId,
+            avatar: responseData.avatar || responseData.photo_url || userData.avatar,
+            totalBids: responseData.totalBids || 0,
+            wonAuctions: responseData.wonAuctions || 0,
+            joinDate: responseData.joinDate || new Date().toISOString().split('T')[0]
+          };
+          
+          setUserData(userDataUpdate);
+          localStorage.setItem('bidwin_user', JSON.stringify(userDataUpdate));
+          
+          if (!showLoading) {
+            toast.success('Profile refreshed!');
+          }
+        },
+        (error) => {
+          console.error('API Error:', error);
+          
+          const cachedUser = localStorage.getItem('bidwin_user');
+          if (cachedUser) {
+            const cachedData = JSON.parse(cachedUser);
+            setUserData(cachedData);
+            setApiError('Using cached data. Connection issue: ' + (error.message || 'API unavailable'));
+            toast.warning('Using cached data', {
+              description: 'Connectivity issues with server'
+            });
+          } else {
+            setApiError(error.message || 'Failed to fetch user data');
+            toast.error('Failed to load profile');
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      setApiError('Unexpected error occurred');
+      toast.error('Failed to load user data');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
   };
 
   // Initial data load
