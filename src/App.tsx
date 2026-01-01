@@ -64,22 +64,24 @@ export default function App() {
   }, []);
 
   const fetchUserData = async (showLoading = true) => {
+    console.log('Fetching user data...');
     if (showLoading && isLoading === false) {
       setIsLoading(true);
     }
+    console.log('showLoading API_URL:', API_URL);
     if (!showLoading) {
       setIsRefreshing(true);
     }
-    
+    console.log('showLoading API_URL:', API_URL);
     setApiError(null);
 
     try {
       let payloadBody: any = {};
       let url = `${API_URL}/mini-app/auth`;
-      
+      console.log('Fetching user data from:', url);
       if (window.Telegram?.WebApp) {
         const tg = window.Telegram.WebApp;
-        
+        console.log('Telegram initData:', tg.initData);
         const initData = tg.initData || tg.initDataUnsafe || '';
         
         if (initData) {
