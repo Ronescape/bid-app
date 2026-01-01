@@ -1,1 +1,1 @@
-export const AUTH_TELEGRAM = "/auth/telegram";
+export const AUTH_TELEGRAM = "/auth/telegram/mini-app";
