@@ -9,6 +9,7 @@ import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
 import { UserData } from './data/gameData';
 import { apiPost } from './utils/apiUtility';
+import { AUTH_TELEGRAM } from './types/endpoints';
 
 type View = 'biddings' | 'packages' | 'bundles' | 'account';
 
@@ -77,7 +78,7 @@ export default function App() {
 
     try {
       let payloadBody: any = {};
-      let url = `${API_URL}/mini-app/auth`;
+      let url = `${API_URL+AUTH_TELEGRAM}`;
       console.log('Fetching user data from:', url);
       if (window.Telegram?.WebApp) {
         const tg = window.Telegram.WebApp;
