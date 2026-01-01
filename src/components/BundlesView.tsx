@@ -31,6 +31,7 @@ interface BundlesViewProps {
   userPoints: number;
   onPointsUsed: (points: number) => void;
   onPointsAdded: (points: number) => void;
+  apiUrl?: string;
 }
 
 export function BundlesView({ userPoints, onPointsUsed, onPointsAdded }: BundlesViewProps) {

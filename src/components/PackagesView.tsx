@@ -15,10 +15,14 @@ interface Package {
   popular?: boolean;
   bonus?: string;
   bonusPoints?: number;
+  apiUrl?: string;
 }
 
 interface PackagesViewProps {
   onPointsAdded: (points: number) => void;
+  onAuctionWon?: (auctionId: string) => void;
+  apiUrl?: string;
+  currentPoints?: number;
 }
 
 export function PackagesView({ onPointsAdded }: PackagesViewProps) {

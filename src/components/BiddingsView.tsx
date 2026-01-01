@@ -31,6 +31,10 @@ interface BiddingsViewProps {
   username: string;
   userPoints: number;
   onPointsUsed: (points: number) => void;
+  onAuctionWon?: (auctionId: string) => void;
+  apiUrl?: string;
+  totalBids?: number;
+  wonAuctions?: number;
 }
 
 export function BiddingsView({ username, userPoints, onPointsUsed }: BiddingsViewProps) {

@@ -6,7 +6,12 @@ import { User, Trophy, TrendingUp, DollarSign, Clock, Award, LogOut, Percent, Tr
 interface AccountViewProps {
   username: string;
   onLogout: () => void;
+  onRefresh: () => void;
   userPoints: number;
+  userData?: any;
+  apiUrl?: string;
+  apiError?: string | null;
+  isTelegram?: boolean;
 }
 
 export function AccountView({ username, onLogout, userPoints }: AccountViewProps) {
