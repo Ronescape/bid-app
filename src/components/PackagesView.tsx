@@ -1,74 +1,94 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Sparkles, Zap, Crown, Coins, Shield, Clock, Gift } from 'lucide-react';
+import { Sparkles, Zap, Crown, Coins, Shield, Clock, Gift, Loader2 } from 'lucide-react';
 import { TopupModal } from './TopupModal';
-
-interface Package {
-  id: string;
-  name: string;
-  points: number;
-  price: number;
-  badge?: string;
-  icon: 'coins' | 'sparkles' | 'zap' | 'crown';
-  popular?: boolean;
-  bonus?: string;
-  bonusPoints?: number;
-  apiUrl?: string;
-}
+import { toast } from 'sonner';
+import { apiGet } from '../utils/apiUtility';
+import { ApiPackage, Package } from '../data/gameData';
 
 interface PackagesViewProps {
-  onPointsAdded: (points: number) => void;
-  onAuctionWon?: (auctionId: string) => void;
-  apiUrl?: string;
+  onPointsAdded: (points: number, packageName?: string) => Promise<void>;
+  apiUrl: string;
   currentPoints?: number;
 }
 
-export function PackagesView({ onPointsAdded }: PackagesViewProps) {
+export function PackagesView({ onPointsAdded, apiUrl }: PackagesViewProps) {
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const packages: Package[] = [
-    {
-      id: '1',
-      name: 'Starter',
-      points: 100,
-      price: 10,
-      icon: 'coins',
-      badge: 'Beginner Friendly',
-      bonusPoints: 10,
-    },
-    {
-      id: '2',
-      name: 'Silver',
-      points: 250,
-      price: 20,
-      icon: 'sparkles',
-      bonus: '+10% Bonus',
-      bonusPoints: 25,
-    },
-    {
-      id: '3',
-      name: 'Gold',
-      points: 600,
-      price: 50,
-      icon: 'zap',
-      popular: true,
-      bonus: '+20% Bonus',
-      badge: 'Most Popular',
-      bonusPoints: 120,
-    },
-    {
-      id: '4',
-      name: 'Diamond',
-      points: 1500,
-      price: 100,
-      icon: 'crown',
-      bonus: '+50% Bonus',
-      badge: 'Best Value',
-      bonusPoints: 750,
-    },
-  ];
+  useEffect(() => {
+    fetchPackages();
+  }, []);
+
+  const fetchPackages = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem('bidwin_token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      await apiGet(
+        `${apiUrl}/packages`,
+        headers,
+        (responseData) => {
+          if (responseData.success && responseData.data) {
+            const transformedPackages = responseData.data.map(transformApiPackage);
+            // Sort by weight
+            const sortedPackages = transformedPackages.sort((a : any, b : any) => a.weight - b.weight);
+            setPackages(sortedPackages);
+          } else {
+            throw new Error(responseData.message || 'Failed to fetch packages');
+          }
+        },
+        (error) => {
+          setError(error.message || 'Failed to load packages');
+          toast.error('Failed to load packages');
+        }
+      );
+    } catch (error) {
+      setError('Unexpected error occurred');
+      toast.error('Failed to load packages');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const transformApiPackage = (apiPkg: ApiPackage): Package => {
+    // Determine icon based on name or weight
+    const getIconFromName = (name: string): 'coins' | 'sparkles' | 'zap' | 'crown' => {
+      if (name.toLowerCase().includes('starter')) return 'coins';
+      if (name.toLowerCase().includes('silver')) return 'sparkles';
+      if (name.toLowerCase().includes('gold')) return 'zap';
+      if (name.toLowerCase().includes('diamond')) return 'crown';
+      return 'coins';
+    };
+
+    return {
+      id: apiPkg.id.toString(),
+      name: apiPkg.name,
+      points: apiPkg.points,
+      price: apiPkg.amount,
+      tag: apiPkg.tag || undefined,
+      icon: getIconFromName(apiPkg.name),
+      popular: apiPkg.is_popular,
+      bonus: apiPkg.bonus,
+      photo: apiPkg.photo.url,
+      weight: apiPkg.weight
+    };
+  };
 
   const getIcon = (icon: string) => {
     switch (icon) {
@@ -85,137 +105,213 @@ export function PackagesView({ onPointsAdded }: PackagesViewProps) {
     }
   };
 
-  const getGradient = (id: string) => {
-    switch (id) {
-      case '1':
+  const getGradient = (weight: number) => {
+    switch (weight) {
+      case 1:
         return 'from-gray-400 via-gray-500 to-gray-600';
-      case '2':
+      case 2:
         return 'from-blue-400 via-blue-500 to-blue-600';
-      case '3':
+      case 3:
         return 'from-yellow-400 via-orange-500 to-orange-600';
-      case '4':
+      case 4:
         return 'from-purple-500 via-purple-600 to-pink-600';
       default:
         return 'from-purple-600 via-blue-600 to-pink-600';
     }
   };
 
-  const renderPackageCard = (pkg: Package) => (
-    <Card 
-      key={pkg.id}
-      className={`group relative overflow-hidden hover:shadow-2xl hover:shadow-purple-500/70 transition-all cursor-pointer bg-slate-800/30 backdrop-blur-sm border-slate-700/50 hover:border-purple-500/50 ${
-        pkg.popular ? 'border-2 border-yellow-400' : ''
-      }`}
-      onClick={() => setSelectedPackage(pkg)}
-    >
-      {pkg.popular && (
-        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-3 py-1 text-xs font-semibold rounded-bl-lg rounded-tr-lg z-10">
-          ⭐ {pkg.badge}
-        </div>
-      )}
-      
-      {!pkg.popular && pkg.badge && (
-        <div className="absolute top-2 right-2">
-          <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0 shadow-xl shadow-purple-500/50 text-xs">
-            {pkg.badge}
-          </Badge>
-        </div>
-      )}
+  const getTotalPoints = (pkg: Package) => {
+    if (pkg.bonus && pkg.bonus > 0) {
+      const bonusPoints = Math.floor(pkg.points * (pkg.bonus / 100));
+      return pkg.points + bonusPoints;
+    }
+    return pkg.points;
+  };
 
-      <div className={`p-6 ${pkg.popular ? 'pt-10' : ''}`}>
-        {/* Icon */}
-        <div
-          className={`w-16 h-16 bg-gradient-to-br ${getGradient(
-            pkg.id
-          )} rounded-2xl flex items-center justify-center text-white mb-4 mx-auto shadow-xl`}
-        >
-          {getIcon(pkg.icon)}
-        </div>
-
-        {/* Package Name */}
-        <h3 className="text-center text-white mb-3">{pkg.name}</h3>
-
-        {/* Points Display */}
-        <div className="text-center mb-4">
-          <div className="text-3xl bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
-            {pkg.points}
+  const renderPackageCard = (pkg: Package) => {
+    const totalPoints = getTotalPoints(pkg);
+    
+    return (
+      <Card 
+        key={pkg.id}
+        className={`group relative overflow-hidden hover:shadow-2xl hover:shadow-purple-500/70 transition-all cursor-pointer bg-slate-800/30 backdrop-blur-sm border-slate-700/50 hover:border-purple-500/50 ${
+          pkg.popular ? 'border-2 border-yellow-400' : ''
+        }`}
+        onClick={() => setSelectedPackage(pkg)}
+      >
+        {pkg.popular && (
+          <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-3 py-1 text-xs font-semibold rounded-bl-lg rounded-tr-lg z-10">
+            ⭐ Popular
           </div>
-          <div className="text-sm text-slate-400">Points</div>
-        </div>
-
-        {/* Bonus */}
-        {pkg.bonus && (
-          <div className="text-center mb-4">
-            <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-xl shadow-green-500/50">
-              <Gift className="w-3 h-3 mr-1" />
-              {pkg.bonus}
+        )}
+        
+        {!pkg.popular && pkg.tag && (
+          <div className="absolute top-2 right-2">
+            <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0 shadow-xl shadow-purple-500/50 text-xs">
+              {pkg.tag}
             </Badge>
           </div>
         )}
 
-        {/* Price */}
-        <div className="text-center mb-6">
-          <div className="text-2xl text-white">${pkg.price}</div>
-          <div className="text-sm text-slate-400">USDT (BSC)</div>
-        </div>
+        <div className={`p-6 ${pkg.popular ? 'pt-10' : ''}`}>
+          {/* Package Image */}
+          <div className="relative w-full h-32 mb-4 overflow-hidden rounded-xl">
+            <img 
+              src={pkg.photo} 
+              alt={pkg.name}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              onError={(e) => {
+                // Fallback to gradient if image fails
+                (e.target as HTMLImageElement).style.display = 'none';
+                const parent = (e.target as HTMLImageElement).parentElement;
+                if (parent) {
+                  parent.innerHTML = `
+                    <div class="w-full h-full flex items-center justify-center ${getGradient(pkg.weight)} rounded-xl">
+                      ${getIcon(pkg.icon).props.children}
+                    </div>
+                  `;
+                }
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+            <div className="absolute bottom-2 right-2">
+              <div className={`w-10 h-10 bg-gradient-to-br ${getGradient(pkg.weight)} rounded-full flex items-center justify-center text-white shadow-xl`}>
+                {getIcon(pkg.icon)}
+              </div>
+            </div>
+          </div>
 
-        {/* Buy Button */}
-        <Button
-          className={`w-full transition-all shadow-xl border-0 bg-gradient-to-r ${getGradient(pkg.id)} hover:shadow-purple-500/70`}
-          onClick={(e : any) => {
-            e.stopPropagation();
-            setSelectedPackage(pkg);
-          }}
+          {/* Package Name */}
+          <h3 className="text-center text-white font-medium mb-3">{pkg.name}</h3>
+
+          {/* Points Display */}
+          <div className="text-center mb-4">
+            <div className="text-3xl bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
+              {totalPoints.toLocaleString()}
+            </div>
+            <div className="text-sm text-slate-400">Total Points</div>
+            {pkg.bonus && pkg.bonus > 0 && (
+              <div className="text-xs text-green-400 mt-1">
+                (Base: {pkg.points.toLocaleString()} + {pkg.bonus}% Bonus)
+              </div>
+            )}
+          </div>
+
+          {/* Bonus Badge */}
+          {pkg.bonus && pkg.bonus > 0 && (
+            <div className="text-center mb-4">
+              <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-xl shadow-green-500/50">
+                <Gift className="w-3 h-3 mr-1" />
+                +{pkg.bonus}% Bonus
+              </Badge>
+            </div>
+          )}
+
+          {/* Price */}
+          <div className="text-center mb-6">
+            <div className="text-2xl text-white">${pkg.price}</div>
+            <div className="text-sm text-slate-400">USDT (BSC)</div>
+          </div>
+
+          {/* Buy Button */}
+          <Button
+            className={`w-full transition-all shadow-xl border-0 bg-gradient-to-r ${getGradient(pkg.weight)} hover:shadow-purple-500/70`}
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              setSelectedPackage(pkg);
+            }}
+          >
+            Buy Now
+          </Button>
+        </div>
+      </Card>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="w-12 h-12 animate-spin text-purple-500 mb-4" />
+        <p className="text-slate-400">Loading packages...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-400 mb-4">Failed to load packages: {error}</p>
+        <Button 
+          onClick={fetchPackages}
+          className="bg-gradient-to-r from-purple-600 to-pink-600"
         >
-          Buy Now
+          Retry
         </Button>
       </div>
-    </Card>
-  );
+    );
+  }
+
+  const stats = [
+    {
+      label: 'Points',
+      description: 'For Bidding',
+      icon: Coins,
+      gradient: 'from-purple-600 to-blue-600',
+      value: packages.reduce((sum, pkg) => sum + getTotalPoints(pkg), 0).toLocaleString()
+    },
+    {
+      label: 'Secure',
+      description: 'USDT BSC',
+      icon: Shield,
+      gradient: 'from-blue-600 to-cyan-500',
+      value: '✓'
+    },
+    {
+      label: 'Instant',
+      description: 'Delivery',
+      icon: Zap,
+      gradient: 'from-green-500 to-emerald-500',
+      value: '✓'
+    },
+    {
+      label: 'Max Bonus',
+      description: 'Percentage',
+      icon: Gift,
+      gradient: 'from-yellow-500 to-orange-500',
+      value: `${Math.max(...packages.map(pkg => pkg.bonus || 0))}%`
+    }
+  ];
+
+  const steps = [
+    { number: 1, title: 'Choose Package', description: 'Select points bundle' },
+    { number: 2, title: 'Scan QR Code', description: 'Or copy wallet address' },
+    { number: 3, title: 'Send USDT', description: 'Via BSC network only' },
+    { number: 4, title: 'Get Points', description: 'Submit transaction hash' }
+  ];
+
+  const notes = [
+    'Only send USDT via BSC (Binance Smart Chain) network',
+    'Minimum transaction amount: $10 USDT',
+    'Points will be credited after transaction confirmation (usually 1-5 minutes)',
+    'Make sure to submit the correct transaction hash',
+    'Contact support if you don\'t receive points within 30 minutes'
+  ];
 
   return (
     <div className="space-y-4">
       {/* Header Stats */}
       <div className="grid grid-cols-4 gap-1">
-        <Card className="p-4 text-center bg-slate-800/30 backdrop-blur-sm border-slate-700/50">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center">
-              <Coins className="w-4 h-4 text-white" />
+        {stats.map((stat, index) => (
+          <Card key={index} className="p-4 text-center bg-slate-800/30 backdrop-blur-sm border-slate-700/50">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <div className={`w-8 h-8 bg-gradient-to-br ${stat.gradient} rounded-full flex items-center justify-center`}>
+                <stat.icon className="w-4 h-4 text-white" />
+              </div>
             </div>
-          </div>
-          <div className="text-lg text-white mb-1">Points</div>
-          <div className="text-sm text-slate-400">For Bidding</div>
-        </Card>
-        
-        <Card className="p-4 text-center bg-slate-800/30 backdrop-blur-sm border-slate-700/50">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-full flex items-center justify-center">
-              <Shield className="w-4 h-4 text-white" />
-            </div>
-          </div>
-          <div className="text-lg text-white mb-1">Secure</div>
-          <div className="text-sm text-slate-400">USDT BSC</div>
-        </Card>
-        
-        <Card className="p-4 text-center bg-slate-800/30 backdrop-blur-sm border-slate-700/50">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" />
-            </div>
-          </div>
-          <div className="text-lg text-white mb-1">Instant</div>
-          <div className="text-sm text-slate-400">Delivery</div>
-        </Card>
-        
-        <Card className="p-4 text-center bg-slate-800/30 backdrop-blur-sm border-slate-700/50">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center">
-              <Gift className="w-4 h-4 text-white" />
-            </div>
-          </div>
-          <div className="text-lg text-white mb-1">+50%</div>
-          <div className="text-sm text-slate-400">Max Bonus</div>
-        </Card>
+            <div className="text-lg text-white mb-1">{stat.value}</div>
+            <div className="text-sm text-slate-400">{stat.label}</div>
+          </Card>
+        ))}
       </div>
 
       {/* Main Header */}
@@ -255,34 +351,15 @@ export function PackagesView({ onPointsAdded }: PackagesViewProps) {
       <Card className="p-6 bg-slate-800/30 backdrop-blur-sm border-slate-700/50">
         <h3 className="text-white mb-6">How to Top Up</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="flex flex-col items-center text-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center text-white mb-3 shadow-xl">
-              <div className="text-lg font-semibold">1</div>
+          {steps.map((step) => (
+            <div key={step.number} className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center text-white mb-3 shadow-xl">
+                <div className="text-lg font-semibold">{step.number}</div>
+              </div>
+              <p className="text-white text-sm font-medium">{step.title}</p>
+              <p className="text-slate-400 text-xs mt-1">{step.description}</p>
             </div>
-            <p className="text-white text-sm font-medium">Choose Package</p>
-            <p className="text-slate-400 text-xs mt-1">Select points bundle</p>
-          </div>
-          <div className="flex flex-col items-center text-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center text-white mb-3 shadow-xl">
-              <div className="text-lg font-semibold">2</div>
-            </div>
-            <p className="text-white text-sm font-medium">Scan QR Code</p>
-            <p className="text-slate-400 text-xs mt-1">Or copy wallet address</p>
-          </div>
-          <div className="flex flex-col items-center text-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center text-white mb-3 shadow-xl">
-              <div className="text-lg font-semibold">3</div>
-            </div>
-            <p className="text-white text-sm font-medium">Send USDT</p>
-            <p className="text-slate-400 text-xs mt-1">Via BSC network only</p>
-          </div>
-          <div className="flex flex-col items-center text-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center text-white mb-3 shadow-xl">
-              <div className="text-lg font-semibold">4</div>
-            </div>
-            <p className="text-white text-sm font-medium">Get Points</p>
-            <p className="text-slate-400 text-xs mt-1">Submit transaction hash</p>
-          </div>
+          ))}
         </div>
       </Card>
 
@@ -295,26 +372,12 @@ export function PackagesView({ onPointsAdded }: PackagesViewProps) {
           <h4 className="text-yellow-400">Important Notes</h4>
         </div>
         <ul className="space-y-2 text-sm text-slate-400">
-          <li className="flex items-start gap-2">
-            <span className="text-yellow-400 mt-1">•</span>
-            <span>Only send USDT via BSC (Binance Smart Chain) network</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-yellow-400 mt-1">•</span>
-            <span>Minimum transaction amount: $10 USDT</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-yellow-400 mt-1">•</span>
-            <span>Points will be credited after transaction confirmation (usually 1-5 minutes)</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-yellow-400 mt-1">•</span>
-            <span>Make sure to submit the correct transaction hash</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-yellow-400 mt-1">•</span>
-            <span>Contact support if you don't receive points within 30 minutes</span>
-          </li>
+          {notes.map((note, index) => (
+            <li key={index} className="flex items-start gap-2">
+              <span className="text-yellow-400 mt-1">•</span>
+              <span>{note}</span>
+            </li>
+          ))}
         </ul>
       </Card>
 
@@ -325,7 +388,7 @@ export function PackagesView({ onPointsAdded }: PackagesViewProps) {
           isOpen={!!selectedPackage}
           onClose={() => setSelectedPackage(null)}
           onSuccess={(points) => {
-            onPointsAdded(points);
+            onPointsAdded(points, selectedPackage.name);
             setSelectedPackage(null);
           }}
         />

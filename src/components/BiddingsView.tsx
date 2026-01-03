@@ -3,414 +3,125 @@ import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Clock, Users, Flame, Coins } from 'lucide-react';
+import { Clock, Users, Flame, Coins, Loader2 } from 'lucide-react';
 import { BidModal } from './BidModal';
+import { toast } from 'sonner';
+import { apiGet } from '../utils/apiUtility';
+import { ApiBiddingItem, BiddingItem } from '../data/gameData';
 
-export interface BiddingItem {
-  id: string;
-  title: string;
-  description: string;
-  image: string;
-  currentBid: number;
-  startingBid: number;
-  bidders: number;
-  startDate: Date;
-  endDate: Date;
-  status: 'live' | 'upcoming' | 'ended';
-  category: string;
-  seller: string;
-  pointsCost: number;
-  bids: Array<{
-    bidder: string;
-    amount: number;
-    time: Date;
-  }>;
-}
 
 interface BiddingsViewProps {
   username: string;
   userPoints: number;
-  onPointsUsed: (points: number) => void;
+  onPointsUsed: (points: number, itemName?: string) => Promise<boolean>;
   onAuctionWon?: (auctionId: string) => void;
-  apiUrl?: string;
+  apiUrl: string;
   totalBids?: number;
   wonAuctions?: number;
 }
 
-export function BiddingsView({ username, userPoints, onPointsUsed }: BiddingsViewProps) {
+const categories: Record<number, string> = {
+  1: 'Electronics',
+  2: 'Gadgets',
+  3: 'Home & Kitchen',
+  4: 'Fashion',
+  5: 'Sports',
+  6: 'Collectibles',
+  7: 'Luxury',
+  8: 'Automotive'
+};
+
+export function BiddingsView({ 
+  username, 
+  userPoints, 
+  onPointsUsed,
+  apiUrl 
+}: BiddingsViewProps) {
   const [selectedItem, setSelectedItem] = useState<BiddingItem | null>(null);
   const [items, setItems] = useState<BiddingItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const mockItems: BiddingItem[] = [
-      {
-        id: '1',
-        title: 'iPhone 15 Pro Max',
-        description: '256GB, Titanium Blue, Brand New Sealed',
-        image: 'https://images.unsplash.com/photo-1695639509828-d4260075e370?w=400',
-        currentBid: 850,
-        startingBid: 500,
-        bidders: 24,
-        startDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 3 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Electronics',
-        seller: '@techdeals',
-        pointsCost: 10,
-        bids: [
-          { bidder: '@john_doe', amount: 850, time: new Date(Date.now() - 5 * 60 * 1000) },
-          { bidder: '@jane_smith', amount: 820, time: new Date(Date.now() - 15 * 60 * 1000) },
-        ]
-      },
-      {
-        id: '2',
-        title: 'Luxury Watch Collection',
-        description: 'Premium Swiss Movement, Gold Plated',
-        image: 'https://images.unsplash.com/photo-1670177257750-9b47927f68eb?w=400',
-        currentBid: 1200,
-        startingBid: 800,
-        bidders: 45,
-        startDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 2 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Luxury',
-        seller: '@luxuryitems',
-        pointsCost: 15,
-        bids: [
-          { bidder: '@watch_collector', amount: 1200, time: new Date(Date.now() - 10 * 60 * 1000) },
-        ]
-      },
-      {
-        id: '3',
-        title: 'Gaming Laptop RTX 4090',
-        description: 'i9 Processor, 64GB RAM, 2TB SSD',
-        image: 'https://images.unsplash.com/photo-1640955014216-75201056c829?w=400',
-        currentBid: 1850,
-        startingBid: 1200,
-        bidders: 38,
-        startDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 6 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Gaming',
-        seller: '@gamingdeals',
-        pointsCost: 20,
-        bids: [
-          { bidder: '@gamer_pro', amount: 1850, time: new Date(Date.now() - 8 * 60 * 1000) },
-        ]
-      },
-      {
-        id: '4',
-        title: 'Designer Sneakers Limited',
-        description: 'Exclusive Colorway, Size 10, Brand New',
-        image: 'https://images.unsplash.com/photo-1686783695684-7b8351fdebbd?w=400',
-        currentBid: 320,
-        startingBid: 200,
-        bidders: 67,
-        startDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 1 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Fashion',
-        seller: '@sneakerhead',
-        pointsCost: 8,
-        bids: [
-          { bidder: '@sneaker_fan', amount: 320, time: new Date(Date.now() - 3 * 60 * 1000) },
-        ]
-      },
-      {
-        id: '5',
-        title: 'Professional Drone 4K',
-        description: 'Camera Drone, GPS, 40min Flight Time',
-        image: 'https://images.unsplash.com/photo-1473968512647-3e447244af8f?w=400',
-        currentBid: 580,
-        startingBid: 350,
-        bidders: 29,
-        startDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 4 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Electronics',
-        seller: '@dronedeals',
-        pointsCost: 12,
-        bids: []
-      },
-      {
-        id: '6',
-        title: 'Smart TV 75" 8K',
-        description: 'OLED Display, Smart Features, HDR',
-        image: 'https://images.unsplash.com/photo-1646861039459-fd9e3aabf3fb?w=400',
-        currentBid: 1650,
-        startingBid: 1000,
-        bidders: 52,
-        startDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 5 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Electronics',
-        seller: '@techstore',
-        pointsCost: 18,
-        bids: []
-      },
-      {
-        id: '7',
-        title: 'iPad Pro 12.9" M2',
-        description: '512GB, WiFi + Cellular, Space Gray',
-        image: 'https://images.unsplash.com/photo-1714071803623-9594e3b77862?w=400',
-        currentBid: 920,
-        startingBid: 650,
-        bidders: 41,
-        startDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 7 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Electronics',
-        seller: '@applestore',
-        pointsCost: 15,
-        bids: []
-      },
-      {
-        id: '8',
-        title: 'Camera Lens 85mm f/1.4',
-        description: 'Professional Portrait Lens, Like New',
-        image: 'https://images.unsplash.com/photo-1608186336271-53313eeaf864?w=400',
-        currentBid: 780,
-        startingBid: 500,
-        bidders: 33,
-        startDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 2 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Photography',
-        seller: '@camerashop',
-        pointsCost: 13,
-        bids: []
-      },
-      {
-        id: '9',
-        title: 'Wireless Earbuds Pro',
-        description: 'Active Noise Cancellation, 30h Battery',
-        image: 'https://images.unsplash.com/photo-1627989580309-bfaf3e58af6f?w=400',
-        currentBid: 145,
-        startingBid: 80,
-        bidders: 78,
-        startDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 3 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Audio',
-        seller: '@audiotech',
-        pointsCost: 5,
-        bids: []
-      },
-      {
-        id: '10',
-        title: 'Electric Guitar Custom',
-        description: 'Handcrafted, Vintage Tone, Premium Woods',
-        image: 'https://images.unsplash.com/photo-1564186763535-ebb21ef5277f?w=400',
-        currentBid: 1250,
-        startingBid: 800,
-        bidders: 26,
-        startDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 8 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Music',
-        seller: '@musicstore',
-        pointsCost: 16,
-        bids: []
-      },
-      {
-        id: '11',
-        title: 'Designer Handbag',
-        description: 'Leather, Limited Edition, Authentic',
-        image: 'https://images.unsplash.com/photo-1559563458-527698bf5295?w=400',
-        currentBid: 680,
-        startingBid: 400,
-        bidders: 54,
-        startDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 4 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Fashion',
-        seller: '@luxurybags',
-        pointsCost: 12,
-        bids: []
-      },
-      {
-        id: '12',
-        title: 'Smart Watch Ultra',
-        description: 'Fitness Tracking, GPS, Waterproof',
-        image: 'https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=400',
-        currentBid: 385,
-        startingBid: 250,
-        bidders: 92,
-        startDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 2 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Wearables',
-        seller: '@techgadgets',
-        pointsCost: 9,
-        bids: []
-      },
-      {
-        id: '13',
-        title: 'Vintage Vinyl Records',
-        description: 'Classic Rock Collection, Mint Condition',
-        image: 'https://images.unsplash.com/photo-1635135449992-c3438898371b?w=400',
-        currentBid: 220,
-        startingBid: 120,
-        bidders: 35,
-        startDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 6 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Collectibles',
-        seller: '@vintagemusic',
-        pointsCost: 6,
-        bids: []
-      },
-      {
-        id: '14',
-        title: 'Designer Sunglasses',
-        description: 'Polarized Lenses, UV Protection',
-        image: 'https://images.unsplash.com/photo-1663585703603-9be01a72a62a?w=400',
-        currentBid: 165,
-        startingBid: 100,
-        bidders: 48,
-        startDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 5 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Fashion',
-        seller: '@eyewear',
-        pointsCost: 5,
-        bids: []
-      },
-      {
-        id: '15',
-        title: 'Mountain Bike Carbon',
-        description: 'Full Suspension, 29er, Shimano XT',
-        image: 'https://images.unsplash.com/photo-1613935352040-74a5e90199dd?w=400',
-        currentBid: 1450,
-        startingBid: 900,
-        bidders: 31,
-        startDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 7 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Sports',
-        seller: '@bikeshop',
-        pointsCost: 17,
-        bids: []
-      },
-      {
-        id: '16',
-        title: 'Espresso Machine Pro',
-        description: 'Commercial Grade, Dual Boiler, Stainless',
-        image: 'https://images.unsplash.com/photo-1620807773206-49c1f2957417?w=400',
-        currentBid: 520,
-        startingBid: 300,
-        bidders: 44,
-        startDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 3 * 60 * 60 * 1000),
-        status: 'live',
-        category: 'Home',
-        seller: '@coffeelovers',
-        pointsCost: 11,
-        bids: []
-      },
-      // Upcoming items
-      {
-        id: '17',
-        title: 'PlayStation 5 Pro',
-        description: 'Next Gen Console, 2TB, Extra Controller',
-        image: 'https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=400',
-        currentBid: 0,
-        startingBid: 400,
-        bidders: 0,
-        startDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-        status: 'upcoming',
-        category: 'Gaming',
-        seller: '@gamingdeals',
-        pointsCost: 10,
-        bids: []
-      },
-      {
-        id: '18',
-        title: 'MacBook Air M3',
-        description: '16GB RAM, 512GB SSD, Midnight',
-        image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400',
-        currentBid: 0,
-        startingBid: 900,
-        bidders: 0,
-        startDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
-        status: 'upcoming',
-        category: 'Electronics',
-        seller: '@applestore',
-        pointsCost: 15,
-        bids: []
-      },
-      {
-        id: '19',
-        title: 'Canon EOS R5',
-        description: 'Mirrorless Camera, 45MP, 8K Video',
-        image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400',
-        currentBid: 0,
-        startingBid: 2000,
-        bidders: 0,
-        startDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000),
-        status: 'upcoming',
-        category: 'Photography',
-        seller: '@camerashop',
-        pointsCost: 25,
-        bids: []
-      },
-      {
-        id: '20',
-        title: 'Rolex Submariner',
-        description: 'Authentic, Box & Papers, 2023',
-        image: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=400',
-        currentBid: 0,
-        startingBid: 5000,
-        bidders: 0,
-        startDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        status: 'upcoming',
-        category: 'Luxury',
-        seller: '@luxurywatches',
-        pointsCost: 50,
-        bids: []
-      },
-      // Ended items
-      {
-        id: '21',
-        title: 'Sony WH-1000XM5',
-        description: 'Noise Cancelling Headphones',
-        image: 'https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=400',
-        currentBid: 280,
-        startingBid: 180,
-        bidders: 65,
-        startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() - 1 * 60 * 60 * 1000),
-        status: 'ended',
-        category: 'Audio',
-        seller: '@audiotech',
-        pointsCost: 7,
-        bids: [
-          { bidder: '@winner123', amount: 280, time: new Date(Date.now() - 2 * 60 * 60 * 1000) },
-        ]
-      },
-      {
-        id: '22',
-        title: 'AirPods Pro 2nd Gen',
-        description: 'USB-C, Spatial Audio',
-        image: 'https://images.unsplash.com/photo-1606220838315-056192d5e927?w=400',
-        currentBid: 195,
-        startingBid: 120,
-        bidders: 88,
-        startDate: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
-        endDate: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        status: 'ended',
-        category: 'Audio',
-        seller: '@applestore',
-        pointsCost: 6,
-        bids: []
-      },
-    ];
-    setItems(mockItems);
+    fetchItems();
   }, []);
+
+  const fetchItems = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem('bidwin_token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      await apiGet(
+        `${apiUrl}/items`,
+        headers,
+        (responseData) => {
+          console.log('Fetched items:', responseData);
+          if (responseData.success && responseData.data) {
+            const transformedItems = responseData.data.map(transformApiItem);
+            console.log('Transformed items:', transformedItems);
+            setItems(transformedItems);
+          } else {
+            throw new Error(responseData.message || 'Failed to fetch items');
+          }
+        },
+        (error) => {
+          setError(error.message || 'Failed to load auctions');
+          toast.error('Failed to load auctions');
+        }
+      );
+    } catch (error) {
+      setError('Unexpected error occurred');
+      toast.error('Failed to load auctions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const transformApiItem = (apiItem: ApiBiddingItem): BiddingItem => {
+    const startDate = new Date(apiItem.opens_at);
+    const endDate = new Date(apiItem.closes_at);
+    const now = new Date();
+    
+    let status: 'live' | 'upcoming' | 'ended' = 'upcoming';
+    
+    if (apiItem.status === 'ended') {
+      status = 'ended';
+    } else if (now >= startDate && now <= endDate) {
+      status = 'live';
+    } else if (now > endDate) {
+      status = 'ended';
+    }
+    
+    return {
+      id: apiItem.id.toString(),
+      title: apiItem.name,
+      description: `Valued at $${apiItem.usd_value} | Bid Increment: $${apiItem.bid_incremental}`,
+      image: apiItem.photo.url,
+      currentBid: apiItem.current_bid,
+      startingBid: apiItem.starting_bid,
+      bidders: apiItem.total_bidders,
+      startDate,
+      endDate,
+      status,
+      category: categories[apiItem.category_id] || 'General',
+      seller: 'Auction House',
+      pointsCost: 10, // Default points cost
+      bid_incremental: apiItem.bid_incremental,
+      usd_value: apiItem.usd_value,
+      is_featured: apiItem.is_featured
+    };
+  };
 
   const getTimeRemaining = (endDate: Date) => {
     const now = new Date();
@@ -460,6 +171,9 @@ export function BiddingsView({ username, userPoints, onPointsUsed }: BiddingsVie
           src={item.image} 
           alt={item.title}
           className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400';
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
         <div className="absolute top-2 right-2">
@@ -476,35 +190,39 @@ export function BiddingsView({ username, userPoints, onPointsUsed }: BiddingsVie
             <Badge className="bg-slate-800/50 text-slate-400 backdrop-blur-sm border-slate-700/30">ENDED</Badge>
           )}
         </div>
-        {item.pointsCost && (
-          <div className="absolute bottom-2 left-2">
-            <Badge className="bg-purple-600 text-white border-0 shadow-xl shadow-purple-500/50">
-              <Coins className="w-3 h-3 mr-1" />
-              {item.pointsCost} Points
+        {item.is_featured && (
+          <div className="absolute top-2 left-2">
+            <Badge className="bg-yellow-600 text-white border-0 shadow-xl shadow-yellow-500/50">
+              ⭐ Featured
             </Badge>
           </div>
         )}
+        <div className="absolute bottom-2 left-2">
+          <Badge className="bg-purple-600 text-white border-0 shadow-xl shadow-purple-500/50">
+            <Coins className="w-3 h-3 mr-1" />
+            {item.pointsCost} Points
+          </Badge>
+        </div>
       </div>
       
       <div className="p-4 space-y-3">
         <div>
-          <h3 className="line-clamp-1 text-white">{item.title}</h3>
-          <p className="text-sm text-slate-400 line-clamp-1">{item.description}</p>
+          <h3 className="line-clamp-1 text-white font-medium">{item.title}</h3>
+          <p className="text-sm text-slate-400 line-clamp-2 mt-1">{item.description}</p>
         </div>
 
-        {item.status !== 'upcoming' && (
-          <div className="flex items-baseline gap-2">
-            <span className="text-sm text-slate-400">Current Bid:</span>
-            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">${item.currentBid}</span>
-          </div>
-        )}
-
-        {item.status === 'upcoming' && (
-          <div className="flex items-baseline gap-2">
-            <span className="text-sm text-slate-400">Starting Bid:</span>
-            <span className="text-white">${item.startingBid}</span>
-          </div>
-        )}
+        <div className="flex items-baseline gap-2">
+          <span className="text-sm text-slate-400">
+            {item.currentBid > 0 ? 'Current Bid:' : 'Starting Bid:'}
+          </span>
+          <span className={`font-medium ${
+            item.currentBid > 0 
+              ? 'bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent'
+              : 'text-white'
+          }`}>
+            ${item.currentBid > 0 ? item.currentBid : item.startingBid}
+          </span>
+        </div>
 
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-4">
@@ -520,6 +238,9 @@ export function BiddingsView({ username, userPoints, onPointsUsed }: BiddingsVie
               }
             </div>
           </div>
+          <Badge className="bg-slate-700/50 text-slate-300">
+            {item.category}
+          </Badge>
         </div>
 
         <Button 
@@ -542,6 +263,41 @@ export function BiddingsView({ username, userPoints, onPointsUsed }: BiddingsVie
         </Button>
       </div>
     </Card>
+  );
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="w-12 h-12 animate-spin text-purple-500 mb-4" />
+        <p className="text-slate-400">Loading auctions...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-400 mb-4">Failed to load auctions: {error}</p>
+        <Button 
+          onClick={fetchItems}
+          className="bg-gradient-to-r from-purple-600 to-pink-600"
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  const renderTabContent = (items: BiddingItem[], emptyMessage: string) => (
+    items.length > 0 ? (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {items.map(renderBidCard)}
+      </div>
+    ) : (
+      <div className="text-center py-12 text-slate-500">
+        {emptyMessage}
+      </div>
+    )
   );
 
   return (
@@ -577,36 +333,15 @@ export function BiddingsView({ username, userPoints, onPointsUsed }: BiddingsVie
         </TabsList>
 
         <TabsContent value="live" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {liveItems.map(renderBidCard)}
-          </div>
-          {liveItems.length === 0 && (
-            <div className="text-center py-12 text-slate-500">
-              No live auctions at the moment
-            </div>
-          )}
+          {renderTabContent(liveItems, 'No live auctions at the moment')}
         </TabsContent>
 
         <TabsContent value="upcoming" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {upcomingItems.map(renderBidCard)}
-          </div>
-          {upcomingItems.length === 0 && (
-            <div className="text-center py-12 text-slate-500">
-              No upcoming auctions
-            </div>
-          )}
+          {renderTabContent(upcomingItems, 'No upcoming auctions')}
         </TabsContent>
 
         <TabsContent value="ended" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {endedItems.map(renderBidCard)}
-          </div>
-          {endedItems.length === 0 && (
-            <div className="text-center py-12 text-slate-500">
-              No ended auctions
-            </div>
-          )}
+          {renderTabContent(endedItems, 'No ended auctions')}
         </TabsContent>
       </Tabs>
 
@@ -618,20 +353,24 @@ export function BiddingsView({ username, userPoints, onPointsUsed }: BiddingsVie
           userPoints={userPoints}
           isOpen={!!selectedItem}
           onClose={() => setSelectedItem(null)}
-          onBidPlaced={(amount) => {
-            setItems(prev => prev.map(item => 
-              item.id === selectedItem.id 
-                ? {
-                    ...item,
-                    currentBid: amount,
-                    bidders: item.bidders + 1,
-                    bids: [
-                      { bidder: `@${username}`, amount, time: new Date() },
-                      ...item.bids
-                    ]
-                  }
-                : item
-            ));
+          onBidPlaced={async (amount) => {
+            const pointsUsed = await onPointsUsed(selectedItem.pointsCost, selectedItem.title);
+            
+            if (pointsUsed) {
+              setItems(prev => prev.map(item => 
+                item.id === selectedItem.id 
+                  ? {
+                      ...item,
+                      currentBid: amount,
+                      bidders: item.bidders + 1,
+                    }
+                  : item
+              ));
+              
+              toast.success(`Bid placed: $${amount}`, {
+                description: `Used ${selectedItem.pointsCost} points`
+              });
+            }
           }}
           onPointsUsed={onPointsUsed}
         />

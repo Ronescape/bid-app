@@ -6,15 +6,7 @@ import { Badge } from './ui/badge';
 import { Card } from './ui/card';
 import { X, Copy, Check, ExternalLink, Coins, Shield, AlertCircle, Gift } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-
-interface Package {
-  id: string;
-  name: string;
-  points: number;
-  price: number;
-  bonus?: string;
-  bonusPoints?: number;
-}
+import { Package } from '../data/gameData';
 
 interface TopupModalProps {
   package: Package;

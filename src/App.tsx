@@ -4,7 +4,7 @@ import { AccountView } from './components/AccountView';
 import { PackagesView } from './components/PackagesView';
 import { BundlesView } from './components/BundlesView';
 import { Button } from './components/ui/button';
-import { Gavel, User, Package, TrendingUp, Coins, LogOut, RefreshCw } from 'lucide-react';
+import { Gavel, User, Package, TrendingUp, Coins, RefreshCw } from 'lucide-react';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
 import { UserData } from './data/gameData';
@@ -14,14 +14,15 @@ import { AUTH_TELEGRAM } from './types/endpoints';
 type View = 'biddings' | 'packages' | 'bundles' | 'account';
 
 const getEnv = (key: string, defaultValue: string = ''): string => {
-  const env = (import.meta as any).env;
-  return env?.[key] || defaultValue;
+  return (import.meta as any).env?.[key] || defaultValue;
+};
+
+const getTokenFromEnv = (): string | null => {
+  return (import.meta as any).env?.VITE_USER_TOKEN || null;
 };
 
 export const API_URL = getEnv('VITE_API_URL', 'http://localhost:3000/api');
 export const IS_DEV = getEnv('DEV') === 'true' || import.meta.env.MODE === 'development';
-export const IS_PROD = import.meta.env.MODE === 'production';
-export const APP_TITLE = getEnv('VITE_APP_TITLE', 'BidWin');
 export const DUMMY_INIT_DATA = getEnv('VITE_INIT_DATA', '{}');
 
 export default function App() {
@@ -38,13 +39,13 @@ export default function App() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [isTelegram, setIsTelegram] = useState(false);
 
+  // Initialize Telegram WebApp
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const isInTelegram = window.Telegram?.WebApp !== undefined;
       setIsTelegram(isInTelegram);
       
       if (isInTelegram) {
-        console.log('Running in Telegram WebApp');
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
@@ -59,65 +60,60 @@ export default function App() {
             tg.themeParams.text_color || '#ffffff'
           );
         }
-      } else {
-        console.log('Running in browser (development mode)');
       }
     }
   }, []);
 
+  // Fetch user data with Telegram authentication
   const fetchUserData = async (showLoading = true) => {
     console.log('Fetching user data...');
-    if (showLoading && isLoading === false) {
-      setIsLoading(true);
+    
+    // Check for token in dev mode
+    if (IS_DEV) {
+      const storedToken = localStorage.getItem('bidwin_token');
+      if (storedToken) {
+        console.log('Using cached token, skipping API call');
+        const cachedUser = localStorage.getItem('bidwin_user');
+        if (cachedUser) {
+          setUserData(JSON.parse(cachedUser));
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      // Add token from env if not present
+      const envToken = getTokenFromEnv();
+      if (envToken && !storedToken) {
+        localStorage.setItem('bidwin_token', envToken);
+      }
     }
-    console.log('showLoading API_URL:', API_URL);
-    if (!showLoading) {
-      setIsRefreshing(true);
-    }
-    console.log('showLoading API_URL:', API_URL);
+    
+    if (showLoading) setIsLoading(true);
+    if (!showLoading) setIsRefreshing(true);
+    
     setApiError(null);
 
     try {
-      let payloadBody: any = {};
-      let url = `${API_URL+AUTH_TELEGRAM}`;
-      console.log('Fetching user data from:', url);
-      if (window.Telegram?.WebApp) {
-        const tg = window.Telegram.WebApp;
-       
-        const initData = tg.initData || tg.initDataUnsafe || '';
-        if (initData) {
-          payloadBody.init_data = initData;
-        } else {
-          console.warn('No Telegram initData available');
-          const cachedUser = localStorage.getItem('bidwin_user');
-          if (cachedUser) {
-            setUserData(JSON.parse(cachedUser));
-            return;
-          }
-        }
-      } else {
-        console.log('Running in browser mode, using demo data');
-        const demoUser = {
-          username: 'DemoUser',
-          points: 500,
-          totalBids: 0,
-          wonAuctions: 0,
-          joinDate: new Date().toISOString().split('T')[0]
-        };
-        setUserData(demoUser);
-        localStorage.setItem('bidwin_user', JSON.stringify(demoUser));
-        return;
-      }
-
-      if(IS_DEV) {
-        payloadBody.init_data = DUMMY_INIT_DATA;
-        console.log('Using dummy init_data for development',payloadBody.init_data);
-      }
-
+      const url = `${API_URL}${AUTH_TELEGRAM}`;
       const headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       };
+
+      // Prepare payload
+      let payloadBody: any = {};
+      
+      if (window.Telegram?.WebApp) {
+        const initData = window.Telegram.WebApp.initData || '';
+        if (initData) {
+          payloadBody.init_data = initData;
+        }
+      }
+
+      // Use dummy data in development
+      if (IS_DEV && !window.Telegram?.WebApp) {
+        payloadBody.init_data = DUMMY_INIT_DATA;
+      }
 
       await apiPost(
         url,
@@ -126,38 +122,33 @@ export default function App() {
         (responseData: any) => {
           console.log('User data received:', responseData);
           
-          const userDataUpdate: UserData = {
-            username: responseData.name || responseData.username || userData.username,
-            points: responseData.points || 500,
-            telegramId: responseData.tg_id?.toString() || responseData.telegramId,
-            avatar: responseData.avatar || responseData.photo_url || userData.avatar,
-            totalBids: responseData.totalBids || 0,
-            wonAuctions: responseData.wonAuctions || 0,
-            joinDate: responseData.joinDate || new Date().toISOString().split('T')[0]
-          };
-          
-          setUserData(userDataUpdate);
-          localStorage.setItem('bidwin_user', JSON.stringify(userDataUpdate));
-          
-          if (!showLoading) {
-            toast.success('Profile refreshed!');
+          if (responseData.success && responseData.data) {
+            const userDataUpdate: UserData = {
+              username: responseData.data.name || responseData.data.username || 'User',
+              points: parseFloat(responseData.data.points) || 0,
+              telegramId: responseData.data.tg_id?.toString(),
+              avatar: `https://t.me/i/userpic/320/${responseData.data.tg_id}.svg`,
+              totalBids: 0,
+              wonAuctions: 0,
+              joinDate: responseData.data.created_ts?.split('T')[0] || new Date().toISOString().split('T')[0]
+            };
+            
+            setUserData(userDataUpdate);
+            localStorage.setItem('bidwin_user', JSON.stringify(userDataUpdate));
+            
+            // Store token if provided
+            if (responseData.token) {
+              localStorage.setItem('bidwin_token', responseData.token);
+            }
+            
+            if (!showLoading) {
+              toast.success('Profile refreshed!');
+            }
           }
         },
         (error) => {
           console.error('API Error:', error);
-          
-          const cachedUser = localStorage.getItem('bidwin_user');
-          if (cachedUser) {
-            const cachedData = JSON.parse(cachedUser);
-            setUserData(cachedData);
-            // setApiError('Using cached data. Connection issue: ' + (error.message || 'API unavailable'));
-            toast.warning('Using cached data', {
-              description: 'Connectivity issues with server'
-            });
-          } else {
-            setApiError(error.message || 'Failed to fetch user data');
-            toast.error('Failed to load profile');
-          }
+          handleApiError();
         }
       );
     } catch (error) {
@@ -170,45 +161,46 @@ export default function App() {
     }
   };
 
+  // Handle API errors with fallback to cached data
+  const handleApiError = () => {
+    const cachedUser = localStorage.getItem('bidwin_user');
+    if (cachedUser) {
+      const cachedData = JSON.parse(cachedUser);
+      setUserData(cachedData);
+      toast.warning('Using cached data', {
+        description: 'Connectivity issues with server'
+      });
+    } else {
+      // Fallback to demo user
+      const demoUser = {
+        username: 'DemoUser',
+        points: 500,
+        totalBids: 0,
+        wonAuctions: 0,
+        joinDate: new Date().toISOString().split('T')[0]
+      };
+      setUserData(demoUser);
+      localStorage.setItem('bidwin_user', JSON.stringify(demoUser));
+      toast.error('Failed to load profile');
+    }
+  };
+
   // Initial data load
   useEffect(() => {
     fetchUserData();
   }, []);
 
-  // Sync user data
-  const syncUserData = async (updatedData: Partial<UserData>) => {
-    try {
-      const newUserData = { ...userData, ...updatedData };
-      setUserData(newUserData);
-      
-      // Save to localStorage
-      localStorage.setItem('bidwin_user', JSON.stringify(newUserData));
-      
-      // Sync with API if in Telegram
-      if (window.Telegram?.WebApp?.initData) {
-        const tg = window.Telegram.WebApp;
-        
-        await fetch(`${API_URL}/user/update`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Telegram-Data': tg.initData,
-          },
-          body: JSON.stringify(newUserData),
-        });
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error syncing data:', error);
-      toast.error('Failed to sync with server');
-      return false;
-    }
+  // Sync user data to localStorage only (API sync removed as it's not in requirements)
+  const syncUserData = (updatedData: Partial<UserData>) => {
+    const newUserData = { ...userData, ...updatedData };
+    setUserData(newUserData);
+    localStorage.setItem('bidwin_user', JSON.stringify(newUserData));
+    return true;
   };
 
   const handlePointsAdded = async (points: number, packageName?: string) => {
     const newPoints = userData.points + points;
-    const success = await syncUserData({ points: newPoints });
+    const success = syncUserData({ points: newPoints });
     
     if (success) {
       toast.success(`🎉 Added ${points} points!`, {
@@ -227,7 +219,7 @@ export default function App() {
     }
     
     const newPoints = userData.points - points;
-    const success = await syncUserData({ 
+    const success = syncUserData({ 
       points: newPoints,
       totalBids: (userData.totalBids || 0) + 1
     });
@@ -242,7 +234,7 @@ export default function App() {
   };
 
   const handleAuctionWon = async () => {
-    const success = await syncUserData({ 
+    const success = syncUserData({ 
       wonAuctions: (userData.wonAuctions || 0) + 1 
     });
     
@@ -251,15 +243,12 @@ export default function App() {
     }
   };
 
-  const handleLogout = async () => {
-    // Clear localStorage
+  const handleLogout = () => {
     localStorage.removeItem('bidwin_user');
     
     if (window.Telegram?.WebApp) {
-      // In Telegram, close the app
       window.Telegram.WebApp.close();
     } else {
-      // In browser, reset to demo user
       const demoUser = {
         username: 'DemoUser',
         points: 500,
@@ -290,11 +279,20 @@ export default function App() {
           <p className="text-slate-400">Loading your auction experience...</p>
           <p className="text-xs text-slate-500 mt-4">
             {isTelegram ? 'Telegram Mode' : 'Browser Mode'} | API: {API_URL}
+            {IS_DEV && localStorage.getItem('bidwin_token') && ' | Token: ✓'}
           </p>
         </div>
       </div>
     );
   }
+
+  // Navigation configuration
+  const navItems = [
+    { id: 'biddings', icon: Gavel, label: 'Bids' },
+    { id: 'packages', icon: Package, label: 'Topup' },
+    { id: 'bundles', icon: TrendingUp, label: 'Bundles' },
+    { id: 'account', icon: User, label: 'Account' },
+  ] as const;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -349,28 +347,18 @@ export default function App() {
               </div>
               
               {/* User Avatar */}
-              <div className="flex items-center gap-2">
-                {/* <div className="text-right mr-2 hidden sm:block">
-                  <p className="text-sm text-white">@{userData.username}</p>
-                  <p className="text-xs text-slate-400">
-                    {userData.wonAuctions || 0} won
-                  </p>
-                </div> */}
-                <div className="relative">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center shadow-2xl shadow-purple-500/50">
-                    {userData.avatar ? (
-                      <img 
-                        src={userData.avatar} 
-                        alt={userData.username}
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-white font-medium">
-                        {userData.username.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                </div>
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center shadow-2xl shadow-purple-500/50">
+                {userData.avatar ? (
+                  <img 
+                    src={userData.avatar} 
+                    alt={userData.username}
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white font-medium">
+                    {userData.username.charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -436,54 +424,21 @@ export default function App() {
       <nav className="fixed bottom-0 left-0 right-0 bg-slate-800/30 backdrop-blur-sm border-t border-slate-700/30 z-50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-4 gap-1 py-2">
-            <Button
-              variant="ghost"
-              onClick={() => setCurrentView('biddings')}
-              className={`flex flex-col items-center gap-1 h-auto py-2 transition-all ${
-                currentView === 'biddings' 
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xl shadow-purple-500/50' 
-                  : 'text-slate-400 hover:text-purple-400 hover:bg-white/10'
-              }`}
-            >
-              <Gavel className="w-5 h-5" />
-              <span className="text-xs">Bids</span>
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setCurrentView('packages')}
-              className={`flex flex-col items-center gap-1 h-auto py-2 transition-all ${
-                currentView === 'packages' 
-                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-xl shadow-purple-500/50' 
-                  : 'text-slate-400 hover:text-purple-400 hover:bg-white/10'
-              }`}
-            >
-              <Package className="w-5 h-5" />
-              <span className="text-xs">Topup</span>
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setCurrentView('bundles')}
-              className={`flex flex-col items-center gap-1 h-auto py-2 transition-all ${
-                currentView === 'bundles' 
-                  ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-xl shadow-blue-500/50' 
-                  : 'text-slate-400 hover:text-purple-400 hover:bg-white/10'
-              }`}
-            >
-              <TrendingUp className="w-5 h-5" />
-              <span className="text-xs">Bundles</span>
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setCurrentView('account')}
-              className={`flex flex-col items-center gap-1 h-auto py-2 transition-all ${
-                currentView === 'account' 
-                  ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-xl shadow-pink-500/50' 
-                  : 'text-slate-400 hover:text-purple-400 hover:bg-white/10'
-              }`}
-            >
-              <User className="w-5 h-5" />
-              <span className="text-xs">Account</span>
-            </Button>
+            {navItems.map(({ id, icon: Icon, label }) => (
+              <Button
+                key={id}
+                variant="ghost"
+                onClick={() => setCurrentView(id as View)}
+                className={`flex flex-col items-center gap-1 h-auto py-2 transition-all ${
+                  currentView === id 
+                    ? getActiveStyle(id)
+                    : 'text-slate-400 hover:text-purple-400 hover:bg-white/10'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-xs">{label}</span>
+              </Button>
+            ))}
           </div>
         </div>
       </nav>
@@ -525,4 +480,20 @@ export default function App() {
       `}</style>
     </div>
   );
+}
+
+// Helper function for active navigation styles
+function getActiveStyle(viewId: string): string {
+  switch(viewId) {
+    case 'biddings':
+      return 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xl shadow-purple-500/50';
+    case 'packages':
+      return 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-xl shadow-purple-500/50';
+    case 'bundles':
+      return 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-xl shadow-blue-500/50';
+    case 'account':
+      return 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-xl shadow-pink-500/50';
+    default:
+      return '';
+  }
 }
