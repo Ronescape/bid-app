@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BiddingsView } from './components/BiddingsView';
+import { BiddingsView } from './components/bidding/BiddingsView';
 import { AccountView } from './components/AccountView';
 import { PackagesView } from './components/PackagesView';
 import { BundlesView } from './components/BundlesView';
