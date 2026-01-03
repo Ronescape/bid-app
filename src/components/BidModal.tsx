@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Clock, Users, TrendingUp, Flame, Tag, User, Calendar, Coins, X } from 'lucide-react';
-import { BiddingItem } from './BiddingsView';
+import { BiddingItem } from '../data/gameData';
 
 interface BidModalProps {
   item: BiddingItem;
@@ -197,7 +197,7 @@ export function BidModal({
           {/* Bid History */}
           <div>
             <h3 className="mb-3 text-white">Bid History</h3>
-            {item.bids.length > 0 ? (
+            {item.bids && item.bids.length > 0 ? (
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {item.bids.map((bid, index) => (
                   <div
@@ -206,10 +206,10 @@ export function BidModal({
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center text-white text-sm shadow-lg">
-                        {bid.bidder.charAt(1).toUpperCase()}
+                        {bid.bidder?.charAt(1)?.toUpperCase() || 'U'}
                       </div>
                       <div>
-                        <div className="text-sm text-white">{bid.bidder}</div>
+                        <div className="text-sm text-white">{bid.bidder || 'Anonymous'}</div>
                         <div className="text-xs text-slate-400">{formatTime(bid.time)}</div>
                       </div>
                     </div>

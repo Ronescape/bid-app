@@ -30,8 +30,12 @@ export interface BiddingItem {
   bid_incremental: number;
   usd_value: number;
   is_featured: boolean;
+  bids?: Array<{
+    bidder: string;
+    amount: number;
+    time: Date;
+  }>;
 }
-
 
 export interface ApiBiddingItem {
   id: number;

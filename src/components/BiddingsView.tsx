@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 import { apiGet } from '../utils/apiUtility';
 import { ApiBiddingItem, BiddingItem } from '../data/gameData';
 
-
 interface BiddingsViewProps {
   username: string;
   userPoints: number;
@@ -116,10 +115,11 @@ export function BiddingsView({
       status,
       category: categories[apiItem.category_id] || 'General',
       seller: 'Auction House',
-      pointsCost: 10, // Default points cost
+      pointsCost: 10,
       bid_incremental: apiItem.bid_incremental,
       usd_value: apiItem.usd_value,
-      is_featured: apiItem.is_featured
+      is_featured: apiItem.is_featured,
+      bids: []
     };
   };
 
@@ -251,7 +251,7 @@ export function BiddingsView({
               ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-purple-500/50'
               : 'bg-slate-800/50 text-slate-400'
           }`}
-          onClick={(e : any) => {
+          onClick={(e: React.MouseEvent) => {
             e.stopPropagation();
             setSelectedItem(item);
           }}
@@ -357,12 +357,20 @@ export function BiddingsView({
             const pointsUsed = await onPointsUsed(selectedItem.pointsCost, selectedItem.title);
             
             if (pointsUsed) {
+              // Create a new bid entry
+              const newBid = {
+                bidder: `@${username}`,
+                amount,
+                time: new Date()
+              };
+              
               setItems(prev => prev.map(item => 
                 item.id === selectedItem.id 
                   ? {
                       ...item,
                       currentBid: amount,
                       bidders: item.bidders + 1,
+                      bids: item.bids ? [...item.bids, newBid] : [newBid]
                     }
                   : item
               ));
