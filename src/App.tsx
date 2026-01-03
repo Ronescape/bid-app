@@ -22,6 +22,7 @@ export const API_URL = getEnv('VITE_API_URL', 'http://localhost:3000/api');
 export const IS_DEV = getEnv('DEV') === 'true' || import.meta.env.MODE === 'development';
 export const IS_PROD = import.meta.env.MODE === 'production';
 export const APP_TITLE = getEnv('VITE_APP_TITLE', 'BidWin');
+export const DUMMY_INIT_DATA = getEnv('VITE_INIT_DATA', '{}');
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('biddings');
@@ -82,9 +83,8 @@ export default function App() {
       console.log('Fetching user data from:', url);
       if (window.Telegram?.WebApp) {
         const tg = window.Telegram.WebApp;
-        console.log('Telegram initData:', tg.initData);
+       
         const initData = tg.initData || tg.initDataUnsafe || '';
-        
         if (initData) {
           payloadBody.init_data = initData;
         } else {
@@ -107,6 +107,11 @@ export default function App() {
         setUserData(demoUser);
         localStorage.setItem('bidwin_user', JSON.stringify(demoUser));
         return;
+      }
+
+      if(IS_DEV) {
+        payloadBody.init_data = DUMMY_INIT_DATA;
+        console.log('Using dummy init_data for development',payloadBody.init_data);
       }
 
       const headers = {
@@ -145,7 +150,7 @@ export default function App() {
           if (cachedUser) {
             const cachedData = JSON.parse(cachedUser);
             setUserData(cachedData);
-            setApiError('Using cached data. Connection issue: ' + (error.message || 'API unavailable'));
+            // setApiError('Using cached data. Connection issue: ' + (error.message || 'API unavailable'));
             toast.warning('Using cached data', {
               description: 'Connectivity issues with server'
             });
@@ -345,12 +350,12 @@ export default function App() {
               
               {/* User Avatar */}
               <div className="flex items-center gap-2">
-                <div className="text-right mr-2 hidden sm:block">
+                {/* <div className="text-right mr-2 hidden sm:block">
                   <p className="text-sm text-white">@{userData.username}</p>
                   <p className="text-xs text-slate-400">
                     {userData.wonAuctions || 0} won
                   </p>
-                </div>
+                </div> */}
                 <div className="relative">
                   <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center shadow-2xl shadow-purple-500/50">
                     {userData.avatar ? (
