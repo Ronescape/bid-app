@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useBundles } from "./hooks/useBundles";
-import { BundleCard } from "./BundleCard";
+import { BundleCard } from "./components/BundleCard";
 import { HowBundlesWork } from "./HowBundlesWork";
 import { BundlesViewProps } from "./types";
 

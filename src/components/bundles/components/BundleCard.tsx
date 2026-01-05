@@ -1,9 +1,9 @@
 
 import { Coins, Sparkles, Zap, Crown } from "lucide-react";
 import { JSX } from "react";
-import { Bundle } from "../../data/gameData";
-import { Card } from "../ui/card";
-import { Button } from "../ui/button";
+import { Bundle } from "../../../data/gameData";
+import { Card } from "../../ui/card";
+import { Button } from "../../ui/button";
 
 const iconMap: Record<string, JSX.Element> = {
   coins: <Coins className="w-8 h-8" />,

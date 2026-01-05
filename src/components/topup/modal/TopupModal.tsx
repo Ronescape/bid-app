@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Badge } from './ui/badge';
-import { Card } from './ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../ui/dialog';
+import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
+import { Badge } from '../../ui/badge';
+import { Card } from '../../ui/card';
 import { X, Copy, Check, ExternalLink, Coins, Shield, AlertCircle, Gift } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { Package } from '../data/gameData';
+import { Package } from '../../../data/gameData';
 
 interface TopupModalProps {
   package: Package;

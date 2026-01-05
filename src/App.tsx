@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { BiddingsView } from './components/bidding/BiddingsView';
-import { AccountView } from './components/AccountView';
-import { PackagesView } from './components/PackagesView';
-import { BundlesView } from './components/BundlesView';
+import { AccountView } from './components/account/AccountView';
+import { PackagesView } from './components/packages/PackagesView';
+import { BundlesView } from './components/bundles/BundlesView';
 import { Button } from './components/ui/button';
 import { Gavel, User, Package, TrendingUp, Coins, RefreshCw } from 'lucide-react';
 import { Toaster } from './components/ui/sonner';
@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { UserData } from './data/gameData';
 import { apiPost } from './utils/apiUtility';
 import { AUTH_TELEGRAM } from './types/endpoints';
+
 
 type View = 'biddings' | 'packages' | 'bundles' | 'account';
 

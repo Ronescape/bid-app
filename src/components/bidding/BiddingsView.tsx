@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { BidModal } from '../BidModal';
+import { BidModal } from './modal/BidModal';
 import { useBiddings } from './hooks/useBiddings';
 import { BidCard } from './BidCard';
 import { BiddingItem } from '../../data/gameData'; // Adjust path if needed

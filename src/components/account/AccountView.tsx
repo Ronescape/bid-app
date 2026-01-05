@@ -1,6 +1,6 @@
-import { Card } from './ui/card';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
+import { Card } from '../ui/card';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
 import { User, Trophy, TrendingUp, DollarSign, Clock, Award, LogOut, Percent, TrendingDown, CheckCircle, Target } from 'lucide-react';
 
 interface AccountViewProps {
