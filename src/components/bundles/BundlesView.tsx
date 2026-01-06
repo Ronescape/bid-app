@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useBundles } from "./hooks/useBundles";
 import { BundleCard } from "./components/BundleCard";
-import { HowBundlesWork } from "./HowBundlesWork";
+import { HowBundlesWork, BundleRewards } from "./HowBundlesWork";
 import { BundlesViewProps } from "./types";
+import { BundleRewardsHistory } from "./BundleRewardsHistory";
 
 
 export function BundlesView(props: BundlesViewProps) {
@@ -14,6 +15,7 @@ export function BundlesView(props: BundlesViewProps) {
 
   return (
     <div className="space-y-6">
+      <BundleRewards />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {bundles.map((b) => (
           <BundleCard
@@ -25,7 +27,7 @@ export function BundlesView(props: BundlesViewProps) {
           />
         ))}
       </div>
-
+      <BundleRewardsHistory />
       <HowBundlesWork />
     </div>
   );

@@ -21,16 +21,16 @@ interface Props {
 
 export function BundleCard({ bundle, active, disabled, onPurchase }: Props) {
   return (
-    <Card className="relative bg-slate-800/30 border-slate-700/50">
+    <Card className="relative bg-slate-800/30 border-slate-700/50 rounded-lg overflow-hidden">
       {bundle.popular && (
-        <div className="absolute top-0 inset-x-0 text-xs text-center bg-purple-600 text-white py-1">
-          ⭐ Popular
+        <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-r from-purple-500 via-pink-400 to-blue-400 text-white flex items-center justify-center text-sm font-semibold rounded-t-lg">
+          ⭐ Most Popular
         </div>
       )}
 
-      <div className="p-6 space-y-4">
+      <div className="p-6 space-y-4 mt-6">
         <div className="flex justify-center">
-          <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${bundle.gradient} flex items-center justify-center`}>
+            <div className={`w-16 h-16 bg-gradient-to-br ${bundle.gradient} rounded-2xl flex items-center justify-center text-white mb-4 mx-auto shadow-xl shadow-purple-500/50`}>
             {iconMap[bundle.icon]}
           </div>
         </div>
@@ -44,6 +44,28 @@ export function BundleCard({ bundle, active, disabled, onPurchase }: Props) {
           <div className="text-xs text-slate-400">Points</div>
         </div>
 
+        {/* Details */}
+        <div className="space-y-2 mb-4 p-3 bg-black/60 rounded-lg border border-slate-700/30">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-400">Daily Points:</span>
+            <span className="text-green-400">+{bundle.dailyPoints}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-400">Daily USDT:</span>
+            <span className="text-blue-400">+${bundle.dailyUsdt}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-400">Duration:</span>
+            <span className="text-purple-400">{bundle.duration} days</span>
+          </div>
+          <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-700/50">
+            <span className="text-slate-400">Total Value:</span>
+            <span className="text-yellow-400">
+              ${(bundle.dailyPoints * 0.1 + bundle.dailyUsdt) * bundle.duration}
+            </span>
+          </div>
+        </div>
+        
         <Button
           disabled={disabled || active}
           onClick={onPurchase}
