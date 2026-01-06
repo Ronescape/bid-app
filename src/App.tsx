@@ -275,7 +275,7 @@ export default function App() {
         <div className="text-center">
           <div className="w-20 h-20 mx-auto mb-6 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
-            BidWin
+            CoinVid
           </h1>
           <p className="text-slate-400">Loading your auction experience...</p>
           <p className="text-xs text-slate-500 mt-4">
@@ -315,7 +315,7 @@ export default function App() {
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-lg bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
-                    BidWin
+                    CoinVid
                   </h1>
                   {/* {isTelegram && (
                     <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">

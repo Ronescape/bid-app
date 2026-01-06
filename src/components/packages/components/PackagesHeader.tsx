@@ -12,9 +12,7 @@ export function PackagesHeader({ packages }: Props) {
     {
       label: "Points",
       icon: Coins,
-      value: packages
-        .reduce((sum, pkg) => sum + getTotalPoints(pkg), 0)
-        .toLocaleString(),
+      value: packages.reduce((sum, pkg) => sum + getTotalPoints(pkg), 0).toLocaleString(),
       gradient: "from-purple-600 to-blue-600",
     },
     {
@@ -42,13 +40,8 @@ export function PackagesHeader({ packages }: Props) {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {stats.map((stat) => (
-          <Card
-            key={stat.label}
-            className="p-4 text-center bg-slate-800/30 border-slate-700/50"
-          >
-            <div
-              className={`w-8 h-8 mx-auto mb-2 rounded-full bg-gradient-to-br ${stat.gradient} flex items-center justify-center`}
-            >
+          <Card key={stat.label} className="p-4 text-center bg-slate-800/30 border-slate-700/50">
+            <div className={`w-8 h-8 mx-auto mb-2 rounded-full bg-gradient-to-br ${stat.gradient} flex items-center justify-center`}>
               <stat.icon className="w-4 h-4 text-white" />
             </div>
             <div className="text-white text-lg">{stat.value}</div>
@@ -62,20 +55,18 @@ export function PackagesHeader({ packages }: Props) {
         <div className="absolute inset-0 bg-gradient-to-r from-purple-900/40 to-blue-900/40" />
         <div className="relative z-10">
           <h2 className="text-white mb-2">Points Packages</h2>
-          <p className="text-slate-400 mb-4">
-            Buy points using USDT (BSC Network) to place bids
-          </p>
+          <p className="text-slate-400 mb-4">Buy points using USDT (BSC Network) to place bids</p>
 
           <div className="flex flex-wrap gap-2">
-            <Badge className="bg-white/10 border-0 text-white">
-              <Clock className="w-3 h-3 mr-1" /> Instant Delivery
-            </Badge>
-            <Badge className="bg-white/10 border-0 text-white">
-              <Shield className="w-3 h-3 mr-1" /> Secure Payment
-            </Badge>
-            <Badge className="bg-white/10 border-0 text-white">
-              <Sparkles className="w-3 h-3 mr-1" /> 24/7 Support
-            </Badge>
+            <div className="flex items-center bg-white/10 text-white border-0 text-xs rounded-full px-2 py-1 font-semibold">
+              <Clock className="w-3 h-3 mr-1 inline" /> Instant Delivery
+            </div>
+            <div className="flex items-center bg-white/10 text-white border-0 text-xs rounded-full px-2 py-1 font-semibold">
+              <Shield className="w-3 h-3 mr-1 inline" /> Secure Payment
+            </div>
+            <div className="flex items-center bg-white/10 text-white border-0 text-xs rounded-full px-2 py-1 font-semibold">
+              <Sparkles className="w-3 h-3 mr-1 inline" /> 24/7 Support
+            </div>
           </div>
         </div>
       </Card>
