@@ -26,8 +26,16 @@ export function PackageCard({ pkg, onSelect }: Props) {
       onClick={() => onSelect(pkg)}
     >
       {pkg.popular && (
-        <div className="absolute top-2 right-2 bg-yellow-400 text-black px-2 py-1 text-xs rounded">
-          ⭐ Popular
+        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-3 py-1 text-xs font-semibold rounded-bl-lg rounded-tr-lg z-10">
+          ⭐ Most Popular
+        </div>
+      )}
+
+      {!pkg.popular && pkg.tag && (
+        <div className="absolute top-2 right-2">
+          <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0 shadow-xl shadow-purple-500/50 text-xs rounded-full px-2 py-1 font-semibold">
+            {pkg.tag}
+          </div>
         </div>
       )}
 
@@ -48,12 +56,17 @@ export function PackageCard({ pkg, onSelect }: Props) {
           <div className="text-3xl text-purple-400">
             {totalPoints.toLocaleString()}
           </div>
-          {pkg.bonus && (
-            <Badge className="mt-1 bg-green-500">
-              <Gift className="w-3 h-3 mr-1" /> +{pkg.bonus}%
-            </Badge>
-          )}
+          <div className="text-sm text-slate-400">Points</div>
         </div>
+
+        {pkg.bonus > 0 && (
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-lg shadow-emerald-500/50 text-xs rounded-full px-3 py-1.5 font-semibold">
+              <span className="text-sm">🎁</span>
+              +{pkg.bonus} Bonus
+            </div>
+          </div>
+        )}
 
         <div className="text-center text-white mb-4">${pkg.price}</div>
 

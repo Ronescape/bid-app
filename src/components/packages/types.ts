@@ -20,7 +20,7 @@ export interface Package {
   tag?: string;
   icon: "coins" | "sparkles" | "zap" | "crown";
   popular: boolean;
-  bonus?: number;
+  bonus: number;
   photo: string;
   weight: number;
 }

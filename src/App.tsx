@@ -317,11 +317,11 @@ export default function App() {
                   <h1 className="text-lg bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
                     BidWin
                   </h1>
-                  {isTelegram && (
+                  {/* {isTelegram && (
                     <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">
                       Telegram
                     </span>
-                  )}
+                  )} */}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <p className="text-xs text-slate-400">
