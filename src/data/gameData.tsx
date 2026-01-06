@@ -23,7 +23,7 @@ export interface BiddingItem {
   bidders: number;
   startDate: Date;
   endDate: Date;
-  status: 'live' | 'upcoming' | 'ended';
+  status_label: 'Live' | 'Upcoming' | 'Closed';
   category: string;
   seller: string;
   pointsCost: number;
@@ -48,7 +48,7 @@ export interface ApiBiddingItem {
   current_bid: number;
   bid_incremental: number;
   usd_value: number;
-  status: string;
+  status_label: "Live" | "Upcoming" | "Closed";
   is_featured: boolean;
   weight: number;
   photo: {

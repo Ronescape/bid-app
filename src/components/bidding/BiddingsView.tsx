@@ -24,9 +24,9 @@ export function BiddingsView({ username, userPoints, apiUrl, onPointsUsed }: Pro
   // <-- Explicitly typed to BiddingItem or null
   const [selectedItem, setSelectedItem] = useState<BiddingItem | null>(null);
 
-  const liveItems = items.filter(item => item.status === 'live');
-  const upcomingItems = items.filter(item => item.status === 'upcoming');
-  const endedItems = items.filter(item => item.status === 'ended');
+  const liveItems = items.filter(item => item.status_label === "Live");
+  const upcomingItems = items.filter(item => item.status_label === "Upcoming");
+  const endedItems = items.filter(item => item.status_label === "Closed");
 
   if (loading) {
     return (
