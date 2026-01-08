@@ -11,6 +11,7 @@ import { UserData } from "./data/gameData";
 import { apiPost } from "./utils/apiUtility";
 import { AUTH_TELEGRAM } from "./types/endpoints";
 import Icon2 from "./images/Icon2.png";
+import { formatNumberWithComma } from "./utils/GeneralUtility";
 
 type View = "biddings" | "packages" | "bundles" | "account";
 
@@ -30,7 +31,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState<View>("biddings");
   const [userData, setUserData] = useState<UserData>({
     username: "BidMaster",
-    points: 500,
+    points: 0.00,
     totalBids: 0,
     wonAuctions: 0,
     joinDate: new Date().toISOString().split("T")[0],
@@ -118,27 +119,43 @@ export default function App() {
           console.log("User data received:", responseData);
 
           if (responseData.success && responseData.data) {
+            const userDataFromApi = responseData.data;
+
             const userDataUpdate: UserData = {
-              username: responseData.data.name || responseData.data.username || "User",
-              points: parseFloat(responseData.data.points) || 0,
-              telegramId: responseData.data.tg_id?.toString(),
-              avatar: `https://t.me/i/userpic/320/${responseData.data.tg_id}.svg`,
+              id: userDataFromApi.id,
+              name: userDataFromApi.name,
+              email: userDataFromApi.email,
+              username: userDataFromApi.username,
+              telegramId: userDataFromApi.tg_id,
+              points: parseFloat(userDataFromApi.points) || 0,
+              usdt: userDataFromApi.usdt,
+              referralCode: userDataFromApi.referral_code,
+              createdTs: userDataFromApi.created_ts,
+              updatedTs: userDataFromApi.updated_ts,
+
+              avatar: `https://t.me/i/userpic/320/${userDataFromApi.tg_id}.svg`,
               totalBids: 0,
               wonAuctions: 0,
-              joinDate: responseData.data.created_ts?.split("T")[0] || new Date().toISOString().split("T")[0],
+              joinDate: userDataFromApi.created_ts?.split("T")[0] || new Date().toISOString().split("T")[0],
             };
 
             setUserData(userDataUpdate);
-            localStorage.setItem("bidwin_user", JSON.stringify(userDataUpdate));
 
-            // Store token if provided
+            localStorage.setItem("bidwin_user", JSON.stringify(userDataUpdate));
+            console.log("User data saved to localStorage:", userDataUpdate);
+
             if (responseData.token) {
               localStorage.setItem("bidwin_token", responseData.token);
+              console.log("Token saved to localStorage");
             }
 
             if (!showLoading) {
               toast.success("Profile refreshed!");
             }
+          } else {
+            console.error("API returned success: false", responseData);
+            toast.error(responseData.message || "Failed to load user data");
+            handleApiError();
           }
         },
         (error) => {
@@ -160,24 +177,32 @@ export default function App() {
   const handleApiError = () => {
     const cachedUser = localStorage.getItem("bidwin_user");
     if (cachedUser) {
-      const cachedData = JSON.parse(cachedUser);
-      setUserData(cachedData);
-      toast.warning("Using cached data", {
-        description: "Connectivity issues with server",
-      });
+      try {
+        const cachedData = JSON.parse(cachedUser);
+        setUserData(cachedData);
+        toast.warning("Using cached data", {
+          description: "Connectivity issues with server",
+        });
+      } catch (e) {
+        console.error("Error parsing cached user data:", e);
+        fallbackToDemoUser();
+      }
     } else {
-      // Fallback to demo user
-      const demoUser = {
-        username: "DemoUser",
-        points: 500,
-        totalBids: 0,
-        wonAuctions: 0,
-        joinDate: new Date().toISOString().split("T")[0],
-      };
-      setUserData(demoUser);
-      localStorage.setItem("bidwin_user", JSON.stringify(demoUser));
-      toast.error("Failed to load profile");
+      fallbackToDemoUser();
     }
+  };
+
+  const fallbackToDemoUser = () => {
+    const demoUser: UserData = {
+      username: "DemoUser",
+      points: 0.0,
+      totalBids: 0,
+      wonAuctions: 0,
+      joinDate: new Date().toISOString().split("T")[0],
+    };
+    setUserData(demoUser);
+    localStorage.setItem("bidwin_user", JSON.stringify(demoUser));
+    toast.error("Failed to load profile - Using demo data");
   };
 
   // Initial data load
@@ -246,7 +271,7 @@ export default function App() {
     } else {
       const demoUser = {
         username: "DemoUser",
-        points: 500,
+        points: 0.0,
         totalBids: 0,
         wonAuctions: 0,
         joinDate: new Date().toISOString().split("T")[0],
@@ -301,25 +326,19 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1">
-              <img
-                src={Icon2}
-                alt="CoinBid Logo"
-                className="w-10 h-10 object-contain"
-              />
-              <h1 className="text-2xl  bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
-                CoinBid
-              </h1>
+              <img src={Icon2} alt="CoinBid Logo" className="w-10 h-10 object-contain" />
+              <h1 className="text-2xl  bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">CoinBid</h1>
             </div>
             <div className="flex items-center gap-3">
               {/* Points Display */}
               <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-full shadow-2xl shadow-purple-500/50">
                 <Coins className="w-4 h-4 text-white" />
-                <span className="text-white font-medium">{userData.points.toLocaleString()}</span>
+                <span className="text-white font-medium">{formatNumberWithComma(userData.points)}</span>
                 <span className="text-white/80 text-xs">points</span>
               </div>
 
               {/* User Avatar */}
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center shadow-2xl shadow-purple-500/50">{userData.avatar ? <img src={userData.avatar} alt={userData.username} className="w-full h-full rounded-full object-cover" /> : <span className="text-white font-medium">{userData.username.charAt(0).toUpperCase()}</span>}</div>
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center shadow-2xl shadow-purple-500/50">{userData.avatar ? <img src={userData.avatar} alt={userData.name || userData.username} className="w-full h-full rounded-full object-cover" /> : <span className="text-white font-medium">{userData.name ? userData.name.substring(0, 2).toUpperCase() : userData.username.substring(0, 2).toUpperCase()}</span>}</div>
             </div>
           </div>
 
