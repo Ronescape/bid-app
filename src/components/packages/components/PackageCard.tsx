@@ -18,7 +18,6 @@ interface Props {
 }
 
 export function PackageCard({ pkg, onSelect }: Props) {
-  const totalPoints = getTotalPoints(pkg);
 
   return (
     <Card
@@ -54,7 +53,7 @@ export function PackageCard({ pkg, onSelect }: Props) {
 
         <div className="text-center mb-3">
           <div className="text-3xl text-purple-400">
-            {totalPoints.toLocaleString()}
+            {pkg.points.toLocaleString()}
           </div>
           <div className="text-sm text-slate-400">Points</div>
         </div>

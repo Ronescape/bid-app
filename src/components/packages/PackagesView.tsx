@@ -1,4 +1,3 @@
-// PackagesView.tsx
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { PackagesViewProps, Package } from "./types";
@@ -16,11 +15,12 @@ export const PUSHER_KEY = getEnv("VITE_PUSHER_APP_KEY");
 export const PUSHER_CLUSTER = getEnv("VITE_PUSHER_CLUSTER");
 
 export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
-  const { packages, loading, error, refetch, purchase } = usePackages(apiUrl);
+  const { packages, loading, purchaseLoading, error, refetch, purchase, submitHash } = usePackages(apiUrl);
   const [selected, setSelected] = useState<Package | null>(null);
   const pusherRef = useRef<Pusher | null>(null);
   const channelRef = useRef<any>(null);
   const [lastEvent, setLastEvent] = useState<any>(null);
+  const [currentReference, setCurrentReference] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selected) {
@@ -44,8 +44,6 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
     }
 
     try {
-
-
       if (!PUSHER_KEY) {
         console.warn("Pusher app key not configured");
         return;
@@ -54,7 +52,7 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
       const pusher = new Pusher(PUSHER_KEY, {
         cluster: PUSHER_CLUSTER,
         forceTLS: true,
-        enabledTransports: ['ws', 'wss'],
+        enabledTransports: ["ws", "wss"],
         activityTimeout: 120000,
         pongTimeout: 30000,
       });
@@ -63,15 +61,15 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
 
       const channelName = `staging.user.${userId}`;
       console.log(`Subscribing to channel: ${channelName} for topup updates`);
-      
+
       const channel = pusher.subscribe(channelName);
       channelRef.current = channel;
 
-      channel.bind('pusher:subscription_succeeded', () => {
+      channel.bind("pusher:subscription_succeeded", () => {
         console.log("✅ Successfully subscribed to topup channel");
       });
 
-      channel.bind('pusher:subscription_error', (error: any) => {
+      channel.bind("pusher:subscription_error", (error: any) => {
         console.error("❌ Failed to subscribe to topup channel:", error);
       });
 
@@ -79,35 +77,38 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
         console.log("📦 Topup status update received:", payload);
         setLastEvent(payload);
 
-        if (payload.status === 'completed' || payload.status === 'success') {
+        if (currentReference && payload.reference === currentReference) {
+          console.log("📦 Update for current transaction:", payload);
+        }
+
+        if (payload.status === "completed" || payload.status === "success") {
           const points = payload.points || payload.amount;
-          
+
           if (points) {
             onPointsAdded(points, payload.package_name || selected?.name || "Package");
-            
+
             if (selected && selected.id === payload.package_id) {
               console.log("✅ Topup successful, closing modal");
               setSelected(null);
             }
-            
-            // Refresh packages list
+
             refetch();
           }
         }
       };
 
-      channel.bind('topup.status.update', handleTopupStatusUpdate);
+      channel.bind("topup.status.update", handleTopupStatusUpdate);
 
-      pusher.connection.bind('error', (err: any) => {
-        console.error('Pusher connection error:', err);
+      pusher.connection.bind("error", (err: any) => {
+        console.error("Pusher connection error:", err);
       });
 
       return () => {
         console.log("🧹 Cleaning up Pusher connection");
         if (channelRef.current) {
-          channelRef.current.unbind('topup.status.update', handleTopupStatusUpdate);
-          channelRef.current.unbind('pusher:subscription_succeeded');
-          channelRef.current.unbind('pusher:subscription_error');
+          channelRef.current.unbind("topup.status.update", handleTopupStatusUpdate);
+          channelRef.current.unbind("pusher:subscription_succeeded");
+          channelRef.current.unbind("pusher:subscription_error");
           channelRef.current.unsubscribe();
           channelRef.current = null;
         }
@@ -116,11 +117,10 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
           pusherRef.current = null;
         }
       };
-
     } catch (error) {
       console.error("Error initializing Pusher:", error);
     }
-  }, [selected, apiUrl, onPointsAdded, refetch]);
+  }, [selected, apiUrl, onPointsAdded, refetch, currentReference]);
 
   // Cleanup on component unmount
   useEffect(() => {
@@ -153,25 +153,34 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
     return (
       <div className="text-center py-12 space-y-4">
         <p className="text-red-400 mb-4">{error}</p>
-        <button 
-          onClick={refetch}
-          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-white transition-colors"
-        >
+        <button onClick={refetch} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-white transition-colors">
           Retry
         </button>
       </div>
     );
   }
 
+  const handleSubmitHash = async (referenceId: string, transactionHash: string) => {
+    try {
+      const response = await submitHash(referenceId, transactionHash);
+      // Store the reference for Pusher updates
+      if (response?.data?.reference) {
+        setCurrentReference(response.data.reference);
+      }
+      return response;
+    } catch (error) {
+      console.error("Submit hash error:", error);
+      throw error;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Last Event Debug (optional) */}
-      {lastEvent && process.env.NODE_ENV === 'development' && (
+      {lastEvent && process.env.NODE_ENV === "development" && (
         <div className="fixed bottom-4 right-4 z-50 p-3 bg-slate-900/90 backdrop-blur-sm rounded-lg border border-purple-500 max-w-xs">
           <h4 className="text-xs font-semibold text-purple-400 mb-1">Last Topup Event</h4>
-          <pre className="text-xs text-slate-300 overflow-auto">
-            {JSON.stringify(lastEvent, null, 2)}
-          </pre>
+          <pre className="text-xs text-slate-300 overflow-auto">{JSON.stringify(lastEvent, null, 2)}</pre>
         </div>
       )}
 
@@ -194,8 +203,11 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
           onSuccess={(points) => {
             onPointsAdded(points, selected.name);
             setSelected(null);
+            setCurrentReference(null); // Reset reference
           }}
-          onPurchase={purchase}
+          onPurchase={() => purchase(selected.id, "crypto_payment")}
+          onSubmitHash={handleSubmitHash}
+          isPurchaseLoading={purchaseLoading}
         />
       )}
     </div>
