@@ -48,9 +48,48 @@ export const usePackages = (apiUrl: string) => {
     }
   };
 
+  const purchase = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const token = localStorage.getItem("bidwin_token");
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      };
+
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      await apiGet(
+        `${apiUrl}/packages`,
+        headers,
+        (res) => {
+          if (res.success && res.data) {
+            const sorted = res.data
+              .map((p: ApiPackage) => transformApiPackage(p))
+              .sort((a: any, b: any) => a.weight - b.weight);
+            setPackages(sorted);
+          } else {
+            throw new Error(res.message);
+          }
+        },
+        (err) => {
+          setError(err.message);
+          toast.error("Failed to load packages");
+        }
+      );
+    } catch {
+      setError("Unexpected error occurred");
+      toast.error("Failed to load packages");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchPackages();
   }, []);
 
-  return { packages, loading, error, refetch: fetchPackages };
+  return { packages, loading, error, refetch: fetchPackages, purchase };
 };

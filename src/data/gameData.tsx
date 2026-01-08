@@ -4,13 +4,21 @@ export type ComboBoxOption = {
 };
 
 export interface UserData {
+  id?: number;
+  name?: string;
+  email?: string | null;
   username: string;
-  points: number;
   telegramId?: string;
+  points: number;
+  usdt?: string | null;
+  referralCode?: string;
+  createdTs?: string;
+  updatedTs?: string;
+  
   avatar?: string;
-  totalBids?: number;
-  wonAuctions?: number;
-  joinDate?: string;
+  totalBids: number;
+  wonAuctions: number;
+  joinDate: string;
 }
 
 export interface BiddingItem {

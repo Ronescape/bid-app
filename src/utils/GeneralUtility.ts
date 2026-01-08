@@ -36,3 +36,19 @@ export const base64Encode = (token: any) => {
 export const base64Decode = (encodedToken: any) => {
     return atob(encodedToken); // Decode Base64 back to string
 };
+
+export const formatNumberWithComma = (value: string | number): string => {
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(numValue)) {
+    return '0.00';
+  }
+  
+  return numValue.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+};
+
+export const getEnv = (key: string, defaultValue: string = ""): string => {
+  return (import.meta as any).env?.[key] || defaultValue;
+};
