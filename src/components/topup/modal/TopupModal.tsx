@@ -7,6 +7,7 @@ import { Card } from "../../ui/card";
 import { X, Copy, Check, ExternalLink, Coins, Shield, AlertCircle, Gift, Loader2, Clock, CheckCircle, AlertTriangle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Package } from "../../../data/gameData";
+import { PaymentData, SubmitHashResponse } from "../../packages/types";
 
 interface TopupModalProps {
   package: Package;
@@ -16,47 +17,15 @@ interface TopupModalProps {
   onPurchase: () => Promise<any>;
   onSubmitHash?: (referenceId: string, transactionHash: string) => Promise<any>;
   isPurchaseLoading?: boolean;
+  currentStep?: number;
+  onStepChange?: (step: number) => void;
+  verificationStatus?: string;
+  onVerificationStatusChange?: (status: string) => void;
+  onTransactionComplete?: () => void;
 }
 
-interface PaymentData {
-  purchasable_type: string;
-  title: string;
-  amount: number;
-  currency: string;
-  payment_method: string;
-  topup_request: {
-    reference: string;
-    wallet_address: string;
-    status: string;
-    currency: string;
-    expire_ts: string;
-  };
-}
-
-interface SubmitHashResponse {
-  data: {
-    reference: string;
-    user_id: number;
-    wallet_address: string;
-    txn_hash: string;
-    currency: string;
-    outlet: string;
-    status: string;
-    notes: string | null;
-    payload: {
-      network: string;
-    };
-    completed_at: string | null;
-    expire_at: string;
-    created_at: string;
-  };
-  message: string;
-  success: boolean;
-  code: number;
-}
-
-export function TopupModal({ package: pkg, isOpen, onClose, onSuccess, onPurchase, onSubmitHash, isPurchaseLoading = false }: TopupModalProps) {
-  const [step, setStep] = useState(1);
+export function TopupModal({ package: pkg, isOpen, onClose, onSuccess, onPurchase, onSubmitHash, isPurchaseLoading = false, currentStep = 1, onStepChange = () => {}, verificationStatus = "", onVerificationStatusChange = () => {}, onTransactionComplete = () => {} }: TopupModalProps) {
+  const [step, setStep] = useState(currentStep);
   const [transactionHash, setTransactionHash] = useState("");
   const [copied, setCopied] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
@@ -65,10 +34,30 @@ export function TopupModal({ package: pkg, isOpen, onClose, onSuccess, onPurchas
   const [timeLeft, setTimeLeft] = useState<string>("");
   const [isSubmittingHash, setIsSubmittingHash] = useState(false);
   const [submitResponse, setSubmitResponse] = useState<SubmitHashResponse | null>(null);
-  const [verificationStatus, setVerificationStatus] = useState<string>("");
 
   const totalPoints = pkg.points + (pkg.bonusPoints || 0);
   const bscScanUrl = `https://bscscan.com/tx/${transactionHash}`;
+
+  // Sync step with parent component
+  useEffect(() => {
+    if (step !== currentStep) {
+      console.log(`🔄 [Modal] Syncing step from parent: ${currentStep}`);
+      setStep(currentStep);
+    }
+  }, [currentStep, step]);
+
+  // Update parent when step changes
+  const handleStepChange = (newStep: number) => {
+    console.log(`🔄 [Modal] Step changing: ${step} -> ${newStep}`);
+    setStep(newStep);
+    onStepChange(newStep);
+  };
+
+  // Update parent when verification status changes
+  const handleVerificationStatusChange = (newStatus: string) => {
+    console.log(`🔄 [Modal] Verification status: ${newStatus}`);
+    onVerificationStatusChange(newStatus);
+  };
 
   const formatWalletAddress = (address: string): string => {
     if (!address) return "";
@@ -101,7 +90,7 @@ export function TopupModal({ package: pkg, isOpen, onClose, onSuccess, onPurchas
         }
 
         toast.success("Payment details generated!");
-        setStep(2);
+        handleStepChange(2);
       } else {
         toast.error(response?.message || "Failed to generate payment details");
       }
@@ -139,15 +128,16 @@ export function TopupModal({ package: pkg, isOpen, onClose, onSuccess, onPurchas
         setSubmitResponse(response);
 
         if (response?.success) {
-          setVerificationStatus(response.data?.status || "confirming");
-          setStep(4);
+          const status = response.data?.status || "confirming";
+          handleVerificationStatusChange(status);
+          handleStepChange(4);
           toast.success(response.message || "Transaction submitted successfully!");
         } else {
           toast.error(response?.message || "Failed to verify transaction");
         }
       } else {
-        setStep(4);
-        setVerificationStatus("confirming");
+        handleVerificationStatusChange("confirming");
+        handleStepChange(4);
         toast.success("Transaction submitted!");
       }
     } catch (error: any) {
@@ -159,13 +149,23 @@ export function TopupModal({ package: pkg, isOpen, onClose, onSuccess, onPurchas
   };
 
   const handleClose = () => {
+    console.log("[Modal] Closing modal");
     setStep(1);
     setTransactionHash("");
     setPaymentData(null);
     setExpiryTime(null);
     setSubmitResponse(null);
-    setVerificationStatus("");
+    handleVerificationStatusChange("");
     onClose();
+  };
+
+  // Handle step 5 completion
+  const handleSuccessComplete = () => {
+    console.log("[Modal] Success complete, triggering onSuccess");
+    if (step === 5) {
+      onSuccess(totalPoints);
+      onTransactionComplete();
+    }
   };
 
   // Countdown timer for expiry
@@ -200,7 +200,7 @@ export function TopupModal({ package: pkg, isOpen, onClose, onSuccess, onPurchas
       setPaymentData(null);
       setExpiryTime(null);
       setSubmitResponse(null);
-      setVerificationStatus("");
+      handleVerificationStatusChange("");
     }
   }, [isOpen]);
 
@@ -517,6 +517,7 @@ export function TopupModal({ package: pkg, isOpen, onClose, onSuccess, onPurchas
                   <div className="text-3xl bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent mb-1">+{totalPoints}</div>
                   <div className="text-sm text-slate-400">Points Added</div>
                 </div>
+                <p className="text-xs text-slate-400">You can now close this window or continue bidding</p>
               </div>
             </div>
           )}
@@ -543,17 +544,17 @@ export function TopupModal({ package: pkg, isOpen, onClose, onSuccess, onPurchas
           )}
           {step === 2 && (
             <>
-              <Button variant="outline" className="flex-1 border-slate-700 text-slate-400 hover:text-white" onClick={() => setStep(1)}>
+              <Button variant="outline" className="flex-1 border-slate-700 text-slate-400 hover:text-white" onClick={() => handleStepChange(1)}>
                 Back
               </Button>
-              <Button className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:shadow-green-500/70" onClick={() => setStep(3)} disabled={!paymentData?.topup_request?.wallet_address}>
+              <Button className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:shadow-green-500/70" onClick={() => handleStepChange(3)} disabled={!paymentData?.topup_request?.wallet_address}>
                 I've Sent Payment
               </Button>
             </>
           )}
           {step === 3 && (
             <>
-              <Button variant="outline" className="flex-1 border-slate-700 text-slate-400 hover:text-white" onClick={() => setStep(2)}>
+              <Button variant="outline" className="flex-1 border-slate-700 text-slate-400 hover:text-white" onClick={() => handleStepChange(2)}>
                 Back
               </Button>
               <Button className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:shadow-green-500/70" onClick={handleSubmitTransaction} disabled={isSubmittingHash}>
@@ -574,7 +575,7 @@ export function TopupModal({ package: pkg, isOpen, onClose, onSuccess, onPurchas
             </Button>
           )}
           {step === 5 && (
-            <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:shadow-purple-500/70" onClick={handleClose}>
+            <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:shadow-purple-500/70" onClick={handleSuccessComplete}>
               Start Bidding
             </Button>
           )}

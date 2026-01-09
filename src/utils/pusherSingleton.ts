@@ -10,6 +10,7 @@ class PusherSingleton {
   private channels: Map<string, any> = new Map();
   private eventListeners: Map<string, Function[]> = new Map();
   private isInitializing = false;
+  private debugMode = process.env.NODE_ENV === 'development';
 
   private constructor() {}
 
@@ -22,12 +23,12 @@ class PusherSingleton {
 
   initialize(): Pusher | null {
     if (this.pusher) {
-      console.log("Pusher already initialized");
+      this.debugLog("Pusher already initialized");
       return this.pusher;
     }
 
     if (this.isInitializing) {
-      console.log("Pusher initialization already in progress");
+      this.debugLog("Pusher initialization already in progress");
       return null;
     }
 
@@ -36,37 +37,52 @@ class PusherSingleton {
       return null;
     }
 
-    console.log("Initializing Pusher singleton");
+    this.debugLog("Initializing Pusher singleton");
     this.isInitializing = true;
 
     try {
       this.pusher = new Pusher(PUSHER_KEY, {
-        cluster: PUSHER_CLUSTER,
+        cluster: PUSHER_CLUSTER || 'mt1',
         forceTLS: true,
         enabledTransports: ["ws", "wss"],
         activityTimeout: 120000,
         pongTimeout: 30000,
-        disableStats: true, // Disable stats to reduce overhead
+        disableStats: true,
+        authEndpoint: '/broadcasting/auth',
+        auth: {
+          headers: {
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+          }
+        }
       });
 
+      // Enhanced connection event logging
       this.pusher.connection.bind('error', (err: any) => {
-        console.error("Pusher connection error:", err);
+        console.error("🚨 Pusher connection error:", err);
         this.isInitializing = false;
       });
 
+      this.pusher.connection.bind('connecting', () => {
+        this.debugLog("🔄 Pusher connecting...");
+      });
+
       this.pusher.connection.bind('connected', () => {
-        console.log("Pusher connected");
+        this.debugLog("✅ Pusher connected successfully");
         this.isInitializing = false;
       });
 
       this.pusher.connection.bind('disconnected', () => {
-        console.log("Pusher disconnected");
+        this.debugLog("❌ Pusher disconnected");
         this.isInitializing = false;
+      });
+
+      this.pusher.connection.bind('state_change', (states: any) => {
+        this.debugLog(`🔄 Pusher state changed: ${states.previous} -> ${states.current}`);
       });
 
       return this.pusher;
     } catch (error) {
-      console.error("Error initializing Pusher:", error);
+      console.error("🚨 Error initializing Pusher:", error);
       this.isInitializing = false;
       return null;
     }
@@ -74,40 +90,55 @@ class PusherSingleton {
 
   subscribeToUserChannel(userId: string | number, eventCallback: (payload: any) => void) {
     if (!this.pusher) {
-      console.error("Pusher not initialized");
-      return;
+      console.error("Pusher not initialized, cannot subscribe");
+      return null;
     }
 
     const channelName = `staging.user.${userId}`;
-    console.log(`Setting up subscription to channel: ${channelName}`);
+    this.debugLog(`Subscribing to channel: ${channelName}`);
 
     let channel = this.channels.get(channelName);
     
     // If channel doesn't exist or isn't subscribed, create it
     if (!channel || !channel.subscribed) {
       if (channel) {
-        console.log(`Cleaning up old channel: ${channelName}`);
+        this.debugLog(`Cleaning up old channel: ${channelName}`);
         channel.unbind_all();
         this.channels.delete(channelName);
       }
       
-      console.log(`Subscribing to new channel: ${channelName}`);
+      this.debugLog(`Creating new subscription to: ${channelName}`);
       channel = this.pusher.subscribe(channelName);
       this.channels.set(channelName, channel);
 
+      // Enhanced subscription event handling
       channel.bind("pusher:subscription_succeeded", () => {
-        console.log(`✅ Successfully subscribed to ${channelName}`);
-        // Bind existing callbacks
+        this.debugLog(`✅ Successfully subscribed to ${channelName}`);
+        
+        // Bind existing callbacks for topup.status.update
         const listenerKey = `${channelName}_topup.status.update`;
         const callbacks = this.eventListeners.get(listenerKey) || [];
+        
         callbacks.forEach(callback => {
-          channel.bind("topup.status.update", callback);
+          if (typeof callback === 'function') {
+            channel.bind("topup.status.update", callback);
+            this.debugLog(`Bound callback to topup.status.update for ${channelName}`);
+          }
         });
       });
 
       channel.bind("pusher:subscription_error", (error: any) => {
         console.error(`❌ Failed to subscribe to ${channelName}:`, error);
       });
+
+      // Bind to all channel events for debugging
+      if (this.debugMode) {
+        channel.bind_global((eventName: string, data: any) => {
+          this.debugLog(`📨 Channel ${channelName} event: ${eventName}`, data);
+        });
+      }
+    } else {
+      this.debugLog(`Already subscribed to ${channelName}, reusing channel`);
     }
 
     // Store the callback
@@ -123,8 +154,15 @@ class PusherSingleton {
       // If channel is already subscribed, bind the callback immediately
       if (channel.subscribed) {
         channel.bind("topup.status.update", eventCallback);
+        this.debugLog(`Immediately bound callback to topup.status.update for ${channelName}`);
+      } else {
+        this.debugLog(`Channel ${channelName} not yet subscribed, callback queued`);
       }
+    } else {
+      this.debugLog(`Callback already registered for ${channelName}`);
     }
+
+    return channel;
   }
 
   unsubscribeFromChannel(channelName: string, eventCallback: (payload: any) => void) {
@@ -140,12 +178,12 @@ class PusherSingleton {
         const channel = this.channels.get(channelName);
         if (channel && channel.subscribed) {
           channel.unbind("topup.status.update", eventCallback);
+          this.debugLog(`Unbound callback from ${channelName}`);
         }
         
         // If no more callbacks, consider unsubscribing
         if (callbacks.length === 0) {
-          console.log(`No more listeners for ${channelName}, keeping channel subscribed`);
-          // We keep the channel subscribed in case new listeners are added
+          this.debugLog(`No more listeners for ${channelName}, keeping channel subscribed`);
         }
       }
     }
@@ -153,11 +191,11 @@ class PusherSingleton {
 
   disconnect() {
     if (this.pusher) {
-      console.log("Disconnecting Pusher singleton");
+      this.debugLog("Disconnecting Pusher singleton");
       this.channels.forEach((channel, channelName) => {
         channel.unbind_all();
         channel.unsubscribe();
-        console.log(`Unsubscribed from ${channelName}`);
+        this.debugLog(`Unsubscribed from ${channelName}`);
       });
       this.channels.clear();
       this.eventListeners.clear();
@@ -168,6 +206,37 @@ class PusherSingleton {
 
   isConnected(): boolean {
     return this.pusher?.connection.state === 'connected';
+  }
+
+  getConnectionState(): string {
+    return this.pusher?.connection.state || 'not_initialized';
+  }
+
+  getAllChannels(): string[] {
+    return Array.from(this.channels.keys());
+  }
+
+  // Debug logging helper
+  private debugLog(message: string, data?: any) {
+    if (this.debugMode) {
+      console.log(`[PusherSingleton] ${message}`, data || '');
+    }
+  }
+
+  // Method to manually trigger a test event (for development)
+  triggerTestEvent(channelName: string, eventName: string, data: any) {
+    if (!this.debugMode) {
+      console.warn("Test events only available in development mode");
+      return;
+    }
+    
+    const channel = this.channels.get(channelName);
+    if (channel && channel.trigger) {
+      this.debugLog(`Triggering test event on ${channelName}: ${eventName}`, data);
+      channel.trigger(eventName, data);
+    } else {
+      console.warn(`Channel ${channelName} not found or cannot trigger events`);
+    }
   }
 }
 
