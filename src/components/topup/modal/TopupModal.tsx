@@ -391,7 +391,7 @@ export function TopupModal({ package: pkg, isOpen, onClose, onSuccess, onPurchas
                   <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
                   <div>
                     <div className="text-sm text-yellow-400 font-medium mb-1 truncate">Important Notice</div>
-                    <ul className="text-xs text-yellow-300/80 space-y-1">
+                    <ul className="text-xs text-white space-y-1">
                       <li>• Send only USDT via BSC network</li>
                       <li>• Do not send any other tokens</li>
                       <li>• Amount must be exactly ${pkg.price} USDT</li>
@@ -491,7 +491,7 @@ export function TopupModal({ package: pkg, isOpen, onClose, onSuccess, onPurchas
                   <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
                   <div className="text-left">
                     <h4 className="text-yellow-400 text-sm font-medium mb-1">What's happening?</h4>
-                    <ul className="text-xs text-slate-300 space-y-1">
+                    <ul className="text-xs text-white text-slate-300 space-y-1">
                       <li>• Your transaction is being verified on the blockchain</li>
                       <li>• This usually takes 1-5 minutes</li>
                       <li>• You will receive a notification when confirmed</li>
