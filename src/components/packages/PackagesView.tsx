@@ -69,9 +69,7 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
             const points = payload.credits || payload.points || payload.amount;
             if (points > 0) {
               setTimeout(() => {
-                const packageName = payload.package_name || selected?.name || "Package";
-                onPointsAdded(points, packageName);
-                toast.success(`✅ ${points} points added to your account!`);
+                updatePoints(points || 0);
               }, 1000);
             }
             break;
@@ -327,3 +325,7 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
     </div>
   );
 }
+function updatePoints(arg0: any) {
+  throw new Error("Function not implemented.");
+}
+

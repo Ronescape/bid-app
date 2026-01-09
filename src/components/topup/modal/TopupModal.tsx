@@ -89,7 +89,7 @@ export function TopupModal({ package: pkg, isOpen, onClose, onSuccess, onPurchas
           setExpiryTime(expiry);
         }
 
-        toast.success("Payment details generated!");
+        // toast.success("Payment details generated!");
         handleStepChange(2);
       } else {
         toast.error(response?.message || "Failed to generate payment details");

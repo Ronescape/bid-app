@@ -73,7 +73,7 @@ export const usePackages = (apiUrl: string) => {
       const data = await response.json();
 
       if (data.success && data.data) {
-        toast.success("Payment details generated!");
+        // toast.success("Payment details generated!");
         return data;
       } else {
         throw new Error(data.message || "Failed to process purchase");
