@@ -20,90 +20,88 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
   const hasSubscribedRef = useRef(false);
   const lastTransactionRef = useRef<string | null>(null);
 
-  const handleTopupStatusUpdate = useCallback((payload: any) => {
-    console.log("📦 [Pusher] Topup status update received:", payload);
-    
-    // Extract reference from the payload - check both field names
-    const reference = payload.referenceCode || payload.reference;
-    console.log("📦 [Pusher] Extracted reference:", reference);
-    
-    // Check ALL possible places where we might have stored the reference
-    const possibleReferences = [
-      currentReference,
-      lastTransactionRef.current,
-      localStorage.getItem('lastTopupReference'),
-      sessionStorage.getItem('currentTopupReference')
-    ].filter(ref => ref);
-    
-    console.log("📦 [Pusher] Possible references to match:", possibleReferences);
+  const handleTopupStatusUpdate = useCallback(
+    (payload: any) => {
+      console.log("📦 [Pusher] Topup status update received:", payload);
 
-    // Check if this event matches ANY of our stored references
-    const isOurTransaction = possibleReferences.some(ref => ref === reference);
-    
-    if (isOurTransaction) {
-      console.log("✅ [Pusher] This is OUR transaction!");
-      console.log("📦 [Pusher] Status:", payload.status);
-      
-      // Update the current reference if it wasn't already set
-      if (!currentReference && reference) {
-        setCurrentReference(reference);
-      }
-      
-      // Update modal state based on payload status
-      switch(payload.status) {
-        case "pending":
-        case "confirming":
-        case "processing":
-          console.log("🔄 [Pusher] Transaction is confirming");
-          setVerificationStatus("confirming");
-          setModalStep(4);
-          break;
-        case "completed":
-        case "success":
-          console.log("🎉 [Pusher] Transaction completed - MOVING TO STEP 5!");
-          setVerificationStatus("completed");
-          setModalStep(5); // This sets the modal to step 5!
-          
-          // Store in localStorage for persistence
-          if (reference) {
-            localStorage.setItem('lastCompletedReference', reference);
-          }
-          
-          // Add points
-          const points = payload.credits || payload.points || payload.amount;
-          if (points > 0) {
-            setTimeout(() => {
-              const packageName = payload.package_name || selected?.name || "Package";
-              onPointsAdded(points, packageName);
-              toast.success(`✅ ${points} points added to your account!`);
-            }, 1000);
-          }
-          break;
-        case "failed":
-        case "error":
-        case "cancelled":
-          console.log("❌ [Pusher] Transaction failed");
-          setVerificationStatus("failed");
-          setModalStep(4);
-          toast.error("Transaction failed. Please try again.");
-          break;
-      }
-    } else {
-      console.log("⚠️ [Pusher] Event doesn't match any known references");
-      console.log("   Event reference:", reference);
-      console.log("   Current reference:", currentReference);
-      console.log("   Last transaction ref:", lastTransactionRef.current);
-    }
+      // Extract reference from the payload - check both field names
+      const reference = payload.referenceCode || payload.reference;
+      console.log("📦 [Pusher] Extracted reference:", reference);
 
-    // Always refetch packages when any transaction completes
-    if (payload.status === "completed" || payload.status === "success") {
-      const points = payload.credits || payload.points || payload.amount;
-      if (points > 0) {
-        console.log("💰 [Pusher] Refetching packages due to completed transaction");
-        refetch();
+      // Check ALL possible places where we might have stored the reference
+      const possibleReferences = [currentReference, lastTransactionRef.current, localStorage.getItem("lastTopupReference"), sessionStorage.getItem("currentTopupReference")].filter((ref) => ref);
+
+      console.log("📦 [Pusher] Possible references to match:", possibleReferences);
+
+      // Check if this event matches ANY of our stored references
+      const isOurTransaction = possibleReferences.some((ref) => ref === reference);
+
+      if (isOurTransaction) {
+        console.log("✅ [Pusher] This is OUR transaction!");
+        console.log("📦 [Pusher] Status:", payload.status);
+
+        // Update the current reference if it wasn't already set
+        if (!currentReference && reference) {
+          setCurrentReference(reference);
+        }
+
+        // Update modal state based on payload status
+        switch (payload.status) {
+          case "pending":
+          case "confirming":
+          case "processing":
+            console.log("🔄 [Pusher] Transaction is confirming");
+            setVerificationStatus("confirming");
+            setModalStep(4);
+            break;
+          case "completed":
+          case "success":
+            console.log("🎉 [Pusher] Transaction completed - MOVING TO STEP 5!");
+            setVerificationStatus("completed");
+            setModalStep(5); // This sets the modal to step 5!
+
+            // Store in localStorage for persistence
+            if (reference) {
+              localStorage.setItem("lastCompletedReference", reference);
+            }
+
+            // Add points
+            const points = payload.credits || payload.points || payload.amount;
+            if (points > 0) {
+              setTimeout(() => {
+                const packageName = payload.package_name || selected?.name || "Package";
+                onPointsAdded(points, packageName);
+                toast.success(`✅ ${points} points added to your account!`);
+              }, 1000);
+            }
+            break;
+          case "failed":
+          case "error":
+          case "cancelled":
+            console.log("❌ [Pusher] Transaction failed");
+            setVerificationStatus("failed");
+            setModalStep(4);
+            toast.error("Transaction failed. Please try again.");
+            break;
+        }
+      } else {
+        console.log("⚠️ [Pusher] Event doesn't match any known references");
+        console.log("   Event reference:", reference);
+        console.log("   Current reference:", currentReference);
+        console.log("   Last transaction ref:", lastTransactionRef.current);
       }
-    }
-  }, [currentReference, onPointsAdded, refetch, selected]);
+
+      // Always refetch packages when any transaction completes
+      if (payload.status === "completed" || payload.status === "success") {
+        const points = payload.credits || payload.points || payload.amount;
+        if (points > 0) {
+          console.log("💰 [Pusher] Refetching packages due to completed transaction");
+          refetch();
+        }
+      }
+    },
+    [currentReference, onPointsAdded, refetch, selected]
+  );
 
   useEffect(() => {
     const userId = getUserId();
@@ -122,53 +120,53 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
     // Only subscribe once
     if (!hasSubscribedRef.current) {
       console.log("🔌 [Pusher] Setting up Pusher subscription for user:", userId);
-      
+
       // Add comprehensive connection state logging
-      pusher.connection.bind('state_change', (states: any) => {
+      pusher.connection.bind("state_change", (states: any) => {
         console.log("🔄 [Pusher] State changed:", states.current, "->", states.previous);
       });
 
-      pusher.connection.bind('connecting', () => {
+      pusher.connection.bind("connecting", () => {
         console.log("🔄 [Pusher] Connecting...");
       });
 
-      pusher.connection.bind('connected', () => {
+      pusher.connection.bind("connected", () => {
         console.log("✅ [Pusher] Connected successfully!");
       });
 
-      pusher.connection.bind('disconnected', () => {
+      pusher.connection.bind("disconnected", () => {
         console.log("❌ [Pusher] Disconnected");
       });
 
-      pusher.connection.bind('error', (error: any) => {
+      pusher.connection.bind("error", (error: any) => {
         console.error("🚨 [Pusher] Connection error:", error);
       });
 
       // Subscribe to user channel with enhanced debugging
       const channelName = `staging.user.${userId}`;
       console.log(`📡 [Pusher] Subscribing to channel: ${channelName}`);
-      
+
       // Direct subscription for debugging
       const channel = pusher.subscribe(channelName);
-      
-      channel.bind('pusher:subscription_succeeded', () => {
+
+      channel.bind("pusher:subscription_succeeded", () => {
         console.log(`✅ [Pusher] Successfully subscribed to ${channelName}`);
       });
-      
-      channel.bind('pusher:subscription_error', (error: any) => {
+
+      channel.bind("pusher:subscription_error", (error: any) => {
         console.error(`❌ [Pusher] Subscription error for ${channelName}:`, error);
       });
-      
+
       // Bind to all events on this channel for debugging
       channel.bind_global((eventName: string, data: any) => {
-        if (!eventName.includes('pusher:')) {
+        if (!eventName.includes("pusher:")) {
           console.log(`📨 [Pusher] Channel event: ${eventName}`, data);
         }
       });
-      
+
       // Also use the singleton method
       pusherSingleton.subscribeToUserChannel(userId.toString(), handleTopupStatusUpdate);
-      
+
       hasSubscribedRef.current = true;
     }
 
@@ -179,14 +177,14 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
 
   // Restore previous transaction reference on mount
   useEffect(() => {
-    const savedReference = localStorage.getItem('lastTopupReference');
-    const savedTimestamp = localStorage.getItem('lastTopupTimestamp');
-    
+    const savedReference = localStorage.getItem("lastTopupReference");
+    const savedTimestamp = localStorage.getItem("lastTopupTimestamp");
+
     if (savedReference && savedTimestamp) {
       const timestamp = parseInt(savedTimestamp);
       const now = Date.now();
       const hoursSince = (now - timestamp) / (1000 * 60 * 60);
-      
+
       // Only restore if it was within the last 2 hours
       if (hoursSince < 2) {
         console.log("🔄 [PackagesView] Restoring previous reference:", savedReference);
@@ -194,8 +192,8 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
         lastTransactionRef.current = savedReference;
       } else {
         // Clean up old reference
-        localStorage.removeItem('lastTopupReference');
-        localStorage.removeItem('lastTopupTimestamp');
+        localStorage.removeItem("lastTopupReference");
+        localStorage.removeItem("lastTopupTimestamp");
       }
     }
   }, []);
@@ -226,12 +224,12 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
     try {
       console.log("📝 [SubmitHash] Submitting hash:", { referenceId, transactionHash });
       const response = await submitHash(referenceId, transactionHash);
-      
+
       console.log("📝 [SubmitHash] Full response:", response);
-      
+
       // Try to extract reference from different possible locations in the response
       let reference = null;
-      
+
       if (response?.data?.reference) {
         reference = response.data.reference;
       } else if (response?.data?.referenceCode) {
@@ -244,34 +242,34 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
         // Use the referenceId passed to the function
         reference = referenceId;
       }
-      
+
       if (reference) {
         console.log("✅ [SubmitHash] Reference found:", reference);
-        
+
         // Store in multiple places to ensure we don't lose it
         setCurrentReference(reference);
         lastTransactionRef.current = reference;
-        
+
         // Store in localStorage for persistence across page refreshes
-        localStorage.setItem('lastTopupReference', reference);
-        localStorage.setItem('lastTopupTimestamp', Date.now().toString());
-        
+        localStorage.setItem("lastTopupReference", reference);
+        localStorage.setItem("lastTopupTimestamp", Date.now().toString());
+
         console.log("✅ [SubmitHash] Reference stored in:", {
           currentReference: reference,
           lastTransactionRef: lastTransactionRef.current,
-          localStorage: localStorage.getItem('lastTopupReference')
+          localStorage: localStorage.getItem("lastTopupReference"),
         });
-        
+
         // Move to waiting step
         setModalStep(4);
         setVerificationStatus("confirming");
-        
+
         toast.success("Transaction submitted! Waiting for confirmation...");
       } else {
         console.warn("⚠️ [SubmitHash] No reference found in response:", response);
         toast.error("Could not get transaction reference");
       }
-      
+
       return response;
     } catch (error) {
       console.error("❌ [SubmitHash] Error:", error);
@@ -283,14 +281,14 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
   const handleModalClose = () => {
     console.log("🚪 [Modal] Closing modal, clearing references");
     setSelected(null);
-    
+
     // Don't clear currentReference immediately - keep it for Pusher events
     // Only clear if we're not in step 4 or 5 (waiting/completed)
     if (modalStep !== 4 && modalStep !== 5) {
       setCurrentReference(null);
       lastTransactionRef.current = null;
     }
-    
+
     setModalStep(1);
     setVerificationStatus("");
   };
@@ -299,8 +297,8 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
     console.log("✅ [Transaction] Complete, cleaning up references");
     setCurrentReference(null);
     lastTransactionRef.current = null;
-    localStorage.removeItem('lastTopupReference');
-    localStorage.removeItem('lastTopupTimestamp');
+    localStorage.removeItem("lastTopupReference");
+    localStorage.removeItem("lastTopupTimestamp");
     setSelected(null);
     setModalStep(1);
     setVerificationStatus("");
@@ -325,22 +323,7 @@ export function PackagesView({ apiUrl, onPointsAdded }: PackagesViewProps) {
       <HowToTopup />
       <ImportantNotes />
 
-      {selected && (
-        <TopupModal
-          package={selected}
-          isOpen
-          onClose={handleModalClose}
-          onTransactionComplete={handleTransactionComplete}
-          onSuccess={handleModalSuccess}
-          onPurchase={() => purchase(selected.id, "crypto_payment")}
-          onSubmitHash={handleSubmitHash}
-          isPurchaseLoading={purchaseLoading}
-          currentStep={modalStep}
-          onStepChange={setModalStep}
-          verificationStatus={verificationStatus}
-          onVerificationStatusChange={setVerificationStatus}
-        />
-      )}
+      {selected && <TopupModal package={selected} isOpen onClose={handleModalClose} onTransactionComplete={handleTransactionComplete} onSuccess={handleModalSuccess} onPurchase={() => purchase(selected.id, "crypto_payment")} onSubmitHash={handleSubmitHash} isPurchaseLoading={purchaseLoading} currentStep={modalStep} onStepChange={setModalStep} verificationStatus={verificationStatus} onVerificationStatusChange={setVerificationStatus} />}
     </div>
   );
 }

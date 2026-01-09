@@ -1,5 +1,5 @@
-import Pusher from 'pusher-js';
-import { getEnv } from './GeneralUtility';
+import Pusher from "pusher-js";
+import { getEnv } from "./GeneralUtility";
 
 const PUSHER_KEY = getEnv("VITE_PUSHER_APP_KEY");
 const PUSHER_CLUSTER = getEnv("VITE_PUSHER_CLUSTER");
@@ -10,7 +10,7 @@ class PusherSingleton {
   private channels: Map<string, any> = new Map();
   private eventListeners: Map<string, Function[]> = new Map();
   private isInitializing = false;
-  private debugMode = process.env.NODE_ENV === 'development';
+  private debugMode = process.env.NODE_ENV === "development";
 
   private constructor() {}
 
@@ -42,41 +42,41 @@ class PusherSingleton {
 
     try {
       this.pusher = new Pusher(PUSHER_KEY, {
-        cluster: PUSHER_CLUSTER || 'mt1',
+        cluster: PUSHER_CLUSTER || "mt1",
         forceTLS: true,
         enabledTransports: ["ws", "wss"],
         activityTimeout: 120000,
         pongTimeout: 30000,
         disableStats: true,
-        authEndpoint: '/broadcasting/auth',
+        authEndpoint: "/broadcasting/auth",
         auth: {
           headers: {
-            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-          }
-        }
+            "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "",
+          },
+        },
       });
 
       // Enhanced connection event logging
-      this.pusher.connection.bind('error', (err: any) => {
+      this.pusher.connection.bind("error", (err: any) => {
         console.error("🚨 Pusher connection error:", err);
         this.isInitializing = false;
       });
 
-      this.pusher.connection.bind('connecting', () => {
+      this.pusher.connection.bind("connecting", () => {
         this.debugLog("🔄 Pusher connecting...");
       });
 
-      this.pusher.connection.bind('connected', () => {
+      this.pusher.connection.bind("connected", () => {
         this.debugLog("✅ Pusher connected successfully");
         this.isInitializing = false;
       });
 
-      this.pusher.connection.bind('disconnected', () => {
+      this.pusher.connection.bind("disconnected", () => {
         this.debugLog("❌ Pusher disconnected");
         this.isInitializing = false;
       });
 
-      this.pusher.connection.bind('state_change', (states: any) => {
+      this.pusher.connection.bind("state_change", (states: any) => {
         this.debugLog(`🔄 Pusher state changed: ${states.previous} -> ${states.current}`);
       });
 
@@ -98,7 +98,7 @@ class PusherSingleton {
     this.debugLog(`Subscribing to channel: ${channelName}`);
 
     let channel = this.channels.get(channelName);
-    
+
     // If channel doesn't exist or isn't subscribed, create it
     if (!channel || !channel.subscribed) {
       if (channel) {
@@ -106,7 +106,7 @@ class PusherSingleton {
         channel.unbind_all();
         this.channels.delete(channelName);
       }
-      
+
       this.debugLog(`Creating new subscription to: ${channelName}`);
       channel = this.pusher.subscribe(channelName);
       this.channels.set(channelName, channel);
@@ -114,13 +114,13 @@ class PusherSingleton {
       // Enhanced subscription event handling
       channel.bind("pusher:subscription_succeeded", () => {
         this.debugLog(`✅ Successfully subscribed to ${channelName}`);
-        
+
         // Bind existing callbacks for topup.status.update
         const listenerKey = `${channelName}_topup.status.update`;
         const callbacks = this.eventListeners.get(listenerKey) || [];
-        
-        callbacks.forEach(callback => {
-          if (typeof callback === 'function') {
+
+        callbacks.forEach((callback) => {
+          if (typeof callback === "function") {
             channel.bind("topup.status.update", callback);
             this.debugLog(`Bound callback to topup.status.update for ${channelName}`);
           }
@@ -146,11 +146,11 @@ class PusherSingleton {
     if (!this.eventListeners.has(listenerKey)) {
       this.eventListeners.set(listenerKey, []);
     }
-    
+
     const callbacks = this.eventListeners.get(listenerKey)!;
     if (!callbacks.includes(eventCallback)) {
       callbacks.push(eventCallback);
-      
+
       // If channel is already subscribed, bind the callback immediately
       if (channel.subscribed) {
         channel.bind("topup.status.update", eventCallback);
@@ -168,19 +168,19 @@ class PusherSingleton {
   unsubscribeFromChannel(channelName: string, eventCallback: (payload: any) => void) {
     const listenerKey = `${channelName}_topup.status.update`;
     const callbacks = this.eventListeners.get(listenerKey);
-    
+
     if (callbacks) {
       const index = callbacks.indexOf(eventCallback);
       if (index > -1) {
         callbacks.splice(index, 1);
-        
+
         // If channel exists, unbind the specific callback
         const channel = this.channels.get(channelName);
         if (channel && channel.subscribed) {
           channel.unbind("topup.status.update", eventCallback);
           this.debugLog(`Unbound callback from ${channelName}`);
         }
-        
+
         // If no more callbacks, consider unsubscribing
         if (callbacks.length === 0) {
           this.debugLog(`No more listeners for ${channelName}, keeping channel subscribed`);
@@ -205,11 +205,11 @@ class PusherSingleton {
   }
 
   isConnected(): boolean {
-    return this.pusher?.connection.state === 'connected';
+    return this.pusher?.connection.state === "connected";
   }
 
   getConnectionState(): string {
-    return this.pusher?.connection.state || 'not_initialized';
+    return this.pusher?.connection.state || "not_initialized";
   }
 
   getAllChannels(): string[] {
@@ -219,7 +219,7 @@ class PusherSingleton {
   // Debug logging helper
   private debugLog(message: string, data?: any) {
     if (this.debugMode) {
-      console.log(`[PusherSingleton] ${message}`, data || '');
+      console.log(`[PusherSingleton] ${message}`, data || "");
     }
   }
 
@@ -229,7 +229,7 @@ class PusherSingleton {
       console.warn("Test events only available in development mode");
       return;
     }
-    
+
     const channel = this.channels.get(channelName);
     if (channel && channel.trigger) {
       this.debugLog(`Triggering test event on ${channelName}: ${eventName}`, data);
