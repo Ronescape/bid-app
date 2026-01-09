@@ -115,18 +115,18 @@ export function BidModal({
             <img src={item.image} alt={item.title} className="w-full h-48 sm:h-64 object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
             <div className="absolute top-4 right-4 space-y-1">
-              {item.status === 'live' && (
+              {item.status_label === 'Live' && (
                 <Badge className="bg-red-500/20 text-red-300 border-red-500/30 backdrop-blur-sm shadow-xl shadow-red-500/50 animate-pulse flex items-center gap-1">
                   <Flame className="w-3 h-3" />
                   LIVE
                 </Badge>
               )}
-              {item.status === 'upcoming' && (
+              {item.status_label === 'Upcoming' && (
                 <Badge className="bg-blue-500 text-white shadow-xl">UPCOMING</Badge>
               )}
-              {item.status === 'ended' && (
+              {/* {item.status_label === 'Ended' && (
                 <Badge className="bg-slate-700/50 text-slate-300 backdrop-blur-sm">ENDED</Badge>
-              )}
+              )} */}
             </div>
             {item.pointsCost && (
               <div className="absolute bottom-4 left-4">
@@ -225,7 +225,7 @@ export function BidModal({
           </div>
 
           {/* Place Bid Section */}
-          {item.status === 'live' && (
+          {item.status_label === 'Live' && (
             <div className="space-y-3 p-4 bg-gradient-to-br from-purple-900/50 via-pink-900/50 to-blue-900/50 rounded-lg border-2 border-purple-500/30 backdrop-blur-sm">
               <h4 className="text-white">Place Your Bid</h4>
               <div className="flex items-center justify-between text-sm p-3 bg-black/60 rounded border border-slate-700/30">
@@ -256,7 +256,7 @@ export function BidModal({
 
         {/* Footer */}
         <div className="border-t border-slate-700/50 bg-slate-900/90 backdrop-blur-sm flex-shrink-0 p-4 space-y-2">
-          {item.status === 'live' ? (
+          {item.status_label === 'Live' ? (
             <>
               <div className="grid grid-cols-3 gap-2">
                 {quickBids.map((bid, index) => (
