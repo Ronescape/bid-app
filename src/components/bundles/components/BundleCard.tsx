@@ -20,6 +20,7 @@ interface Props {
 }
 
 export function BundleCard({ bundle, active, disabled, onPurchase }: Props) {
+  console.log("Bundle photo URL:", bundle?.photo);
   return (
     <Card className="relative bg-slate-800/30 border-slate-700/50 rounded-lg overflow-hidden">
       {bundle.popular && (
@@ -30,11 +31,8 @@ export function BundleCard({ bundle, active, disabled, onPurchase }: Props) {
 
       <div className="p-6 space-y-4 mt-6">
         <div className="flex justify-center">
-            <div className={`w-16 h-16 bg-gradient-to-br ${bundle.gradient} rounded-2xl flex items-center justify-center text-white mb-4 mx-auto shadow-xl shadow-purple-500/50`}>
-            {iconMap[bundle.icon]}
-          </div>
+            <img src={bundle?.photo} alt="" className="w-12 h-[100px] object-contain" />
         </div>
-
         <h3 className="text-center text-white">{bundle.name}</h3>
 
         <div className="text-center">

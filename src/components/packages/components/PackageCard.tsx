@@ -40,7 +40,7 @@ export function PackageCard({ pkg, onSelect }: Props) {
 
       <div className="p-6">
         <div className="flex justify-center mb-4">
-          <img src={pkg.photo.url} alt="CoinBid Logo" className="w-12 h-[100px] object-contain" />
+          <img src={pkg.photo.url} alt="" className="w-12 h-[100px] object-contain" />
         </div>
 
         <h3 className="text-center text-white mb-2">{pkg.name}</h3>
