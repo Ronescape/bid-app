@@ -17,9 +17,13 @@ export const transformApiPackage = (apiPkg: ApiPackage): Package => {
     tag: apiPkg.tag,
     icon: getIconFromName(apiPkg.name),
     popular: apiPkg.is_popular,
-    bonus: apiPkg.bonus,
-    photo: apiPkg.photo.url,
+    bonus: apiPkg.bonus || 0,
+    photo: {
+      thumbnail_url: apiPkg.photo.thumbnail_url || "",
+      url: apiPkg.photo.url || "",
+    },
     weight: apiPkg.weight,
+    bonusPoints: 0
   };
 };
 

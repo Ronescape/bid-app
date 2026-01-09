@@ -7,7 +7,8 @@ export interface ApiPackage {
   is_popular: boolean;
   bonus?: number;
   photo: {
-    url: string;
+    url?: string;
+    thumbnail_url?: string;
   };
   weight: number;
 }
@@ -21,8 +22,12 @@ export interface Package {
   icon: "coins" | "sparkles" | "zap" | "crown";
   popular: boolean;
   bonus: number;
-  photo: string;
+  photo: {
+    thumbnail_url: string;
+    url: string;
+  };
   weight: number;
+  bonusPoints: number;
 }
 
 export interface PackagesViewProps {

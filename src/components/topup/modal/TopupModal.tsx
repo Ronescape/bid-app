@@ -6,8 +6,8 @@ import { Badge } from "../../ui/badge";
 import { Card } from "../../ui/card";
 import { X, Copy, Check, ExternalLink, Coins, Shield, AlertCircle, Gift, Loader2, Clock, CheckCircle, AlertTriangle } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { Package } from "../../../data/gameData";
-import { PaymentData, SubmitHashResponse } from "../../packages/types";
+import { Package, PaymentData, SubmitHashResponse } from "../../packages/types";
+
 
 interface TopupModalProps {
   package: Package;

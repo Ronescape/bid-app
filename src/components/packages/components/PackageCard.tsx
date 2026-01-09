@@ -40,13 +40,7 @@ export function PackageCard({ pkg, onSelect }: Props) {
 
       <div className="p-6">
         <div className="flex justify-center mb-4">
-          <div
-            className={`w-12 h-12 bg-gradient-to-br ${getGradient(
-              pkg.weight
-            )} rounded-full flex items-center justify-center text-white`}
-          >
-            {icons[pkg.icon]}
-          </div>
+          <img src={pkg.photo.url} alt="CoinBid Logo" className="w-12 h-[100px] object-contain" />
         </div>
 
         <h3 className="text-center text-white mb-2">{pkg.name}</h3>
