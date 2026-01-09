@@ -115,7 +115,7 @@ export const usePackages = (apiUrl: string) => {
       console.log("Submit hash response:", data);
 
       if (data.success) {
-        toast.success(data.message || "Transaction submitted successfully!");
+        // toast.success(data.message || "Transaction submitted successfully!");
         return data;
       } else {
         throw new Error(data.message || "Failed to verify transaction");
